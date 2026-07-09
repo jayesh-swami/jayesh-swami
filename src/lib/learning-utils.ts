@@ -1,5 +1,4 @@
 import { getCollection, type CollectionEntry } from 'astro:content'
-import learningNotes from '@/content/learning-notes.json'
 
 export type LearningEntry = CollectionEntry<'learning'>
 export type LearningPostEntry = CollectionEntry<'learningPosts'>
@@ -42,10 +41,6 @@ export async function getLinkedBlogPost(
 ): Promise<CollectionEntry<'blog'> | null> {
   const posts = await getCollection('blog')
   return posts.find((post) => post.data.learning_slug === slug) ?? null
-}
-
-export function getNotesUrl(slug: string): string | null {
-  return (learningNotes as Record<string, string>)[slug] ?? null
 }
 
 export async function getLearningEntryForPost(

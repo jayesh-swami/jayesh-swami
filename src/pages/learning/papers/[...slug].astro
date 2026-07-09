@@ -13,7 +13,6 @@ import {
   getSlug,
   filterByType,
   getLinkedBlogPost,
-  getNotesUrl,
   getLearningPost,
   hasLearningPost,
 } from '@/lib/learning-utils'
@@ -74,14 +73,12 @@ const allPapers = filterByType(allEntries, 'paper-readings')
 
 let d: any = null
 let blogPost: any = null
-let notesUrl: string | null = null
 let learningContent: any = null
 
 if (mode === 'detail' && entry) {
   const slug = getSlug(entry.id)
   d = entry.data
   blogPost = await getLinkedBlogPost(slug)
-  notesUrl = getNotesUrl(slug)
   const lp = await getLearningPost(slug)
   learningContent = lp ? await render(lp) : null
 }
@@ -227,17 +224,6 @@ const startDate = d?.start_date ?? d?.event_log?.find((e: any) => e.type === 'st
                 >
                   <Icon name="lucide:file-text" class="size-3.5" />
                   Read my notes on this paper
-                </a>
-              )}
-              {notesUrl && (
-                <a
-                  href={notesUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="border-muted-foreground/20 hover:bg-muted inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors"
-                >
-                  <Icon name="lucide:github" class="size-3.5" />
-                  View notes on GitHub
                 </a>
               )}
             </div>

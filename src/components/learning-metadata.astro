@@ -6,7 +6,6 @@ import { formatDate } from '@/lib/utils'
 import {
   getLearningBySlug,
   getLinkedBlogPost,
-  getNotesUrl,
   getLearningPost,
 } from '@/lib/learning-utils'
 import { Icon } from 'astro-icon/components'
@@ -24,7 +23,6 @@ if (!entry) {
 }
 
 const blogPost = await getLinkedBlogPost(slug)
-const notesUrl = getNotesUrl(slug)
 const learningPost = await getLearningPost(slug)
 const learningContent = learningPost ? await render(learningPost) : null
 const d = entry.data
@@ -172,17 +170,6 @@ const startDate = d.start_date ?? d.event_log?.find((e: any) => e.type === 'star
         >
           <Icon name="lucide:file-text" class="size-4" />
           Read my notes on this {d.type}
-        </a>
-      )}
-      {notesUrl && (
-        <a
-          href={notesUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="border-muted-foreground/20 hover:bg-muted inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors"
-        >
-          <Icon name="lucide:github" class="size-3.5" />
-          View notes on GitHub
         </a>
       )}
     </div>
