@@ -68,4 +68,16 @@ const learningPosts = defineCollection({
   }),
 })
 
-export const collections = { blog, learning, learningPosts }
+const projects = defineCollection({
+  loader: glob({ pattern: '**/*.mdx', base: './src/content/projects' }),
+  schema: z.object({
+    title: z.string(),
+    description: z.string(),
+    date: z.coerce.date(),
+    github: z.string().url().optional(),
+    website: z.string().url().optional(),
+    labels: z.array(z.string()).default([]),
+  }),
+})
+
+export const collections = { blog, learning, learningPosts, projects }

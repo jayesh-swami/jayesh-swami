@@ -6,7 +6,7 @@ interface Props {
 const { lines } = Astro.props
 ---
 
-<section class="rounded-lg bg-background p-4 font-mono text-sm" data-lines={JSON.stringify(lines)}>
+<section class="bg-background p-4 font-mono text-sm" data-lines={JSON.stringify(lines)}>
   <div id="terminal-output" class="text-foreground leading-relaxed">
     {
       lines.map((line, i) => (

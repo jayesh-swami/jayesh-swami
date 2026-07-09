@@ -121,11 +121,17 @@ const startDate = d.start_date ?? d.event_log?.find((e: any) => e.type === 'star
   {d.event_log && d.event_log.length > 0 && (
     <div class="mb-4">
       <span class="mb-2 block text-sm font-medium">Timeline</span>
-      <div class="space-y-2">
+      <div>
         {d.event_log
           .sort((a, b) => b.date.valueOf() - a.date.valueOf())
-          .map((event) => (
-            <div class="flex gap-3 text-sm">
+          .map((event, idx, arr) => (
+            <div class="relative flex gap-3 text-sm pb-0">
+              <div class="relative hidden sm:flex flex-col items-center">
+                {idx < arr.length - 1 && (
+                  <div class="absolute left-1/2 top-6 bottom-0 w-px bg-border -translate-x-1/2" />
+                )}
+                <div class="size-2 rounded-full bg-border shrink-0 mt-1.5 z-10" />
+              </div>
               <span class="text-muted-foreground shrink-0 w-[8.5rem] text-xs">
                 {formatDate(event.date)}
               </span>
