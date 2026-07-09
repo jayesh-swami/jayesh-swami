@@ -4,9 +4,10 @@ import Breadcrumbs from '@/components/breadcrumbs.astro'
 import PageHead from '@/components/page-head.astro'
 import PaginationComponent from '@/components/ui/pagination'
 import Layout from '@/layouts/layout.astro'
+import LearningTabs from '@/components/learning-tabs.astro'
 import { Badge } from '@/components/ui/badge'
 import { Icon } from 'astro-icon/components'
-import { render } from 'astro:content'
+import { getCollection, render } from 'astro:content'
 import {
   getAllLearning,
   getLearningWithPosts,
@@ -18,19 +19,30 @@ import {
 } from '@/lib/learning-utils'
 import { formatDate } from '@/lib/utils'
 import type { LearningEntry } from '@/lib/learning-utils'
+import type { CollectionEntry } from 'astro:content'
+
+type LearningData = CollectionEntry<'learning'>['data']
+type BlogPost = CollectionEntry<'blog'>
+
+type Path = {
+  params: { slug?: string }
+  props:
+    | { mode: 'detail'; entry: LearningEntry }
+    | { mode: 'list'; entries: LearningEntry[]; currentPage: number; lastPage: number }
+}
 
 export async function getStaticPaths() {
   const pageSize = 5
   const allEntries = await getAllLearning()
   const courses = allEntries.filter((e) => e.id.startsWith('courses/'))
-  const paths: any[] = []
+  const paths: Path[] = []
 
   for (const entry of courses) {
     const slug = getSlug(entry.id)
     if (await hasLearningPost(slug)) {
       paths.push({
         params: { slug },
-        props: { mode: 'detail', entry },
+        props: { mode: 'detail' as const, entry },
       })
     }
   }
@@ -43,7 +55,7 @@ export async function getStaticPaths() {
     paths.push({
       params: { slug: pageNum === 1 ? undefined : String(pageNum) },
       props: {
-        mode: 'list',
+        mode: 'list' as const,
         entries: filtered.slice(i, i + pageSize),
         currentPage: pageNum,
         lastPage,
@@ -54,15 +66,22 @@ export async function getStaticPaths() {
   return paths
 }
 
-const { mode, entry, entries, currentPage, lastPage } = Astro.props
+const { mode, entry, entries = [], currentPage = 1, lastPage = 1 } = Astro.props as {
+  mode?: string
+  entry?: LearningEntry
+  entries?: LearningEntry[]
+  currentPage?: number
+  lastPage?: number
+}
 
 const allEntries = await getLearningWithPosts()
 const allCourses = filterByType(allEntries, 'courses')
 const allPapers = filterByType(allEntries, 'paper-readings')
+const allProjects = (await getCollection('projects')).length
 
-let d: any = null
-let blogPost: any = null
-let learningContent: any = null
+let d: LearningData | null = null
+let blogPost: BlogPost | null = null
+let learningContent: { Content: any } | null = null
 
 if (mode === 'detail' && entry) {
   const slug = getSlug(entry.id)
@@ -72,11 +91,11 @@ if (mode === 'detail' && entry) {
   learningContent = lp ? await render(lp) : null
 }
 
-const startDate = d?.start_date ?? d?.event_log?.find((e: any) => e.type === 'start')?.date
+const startDate = d?.start_date ?? d?.event_log?.find((e: { type: string }) => e.type === 'start')?.date
 ---
 
 {
-  mode === 'detail' && entry ? (
+  mode === 'detail' && entry && d ? (
     <Layout>
       <PageHead slot="head" title={d.name} description={d.name} />
       <section class="grid grid-cols-[minmax(0px,1fr)_min(calc(var(--breakpoint-md)-2rem),100%)_minmax(0px,1fr)] gap-y-6">
@@ -153,8 +172,8 @@ const startDate = d?.start_date ?? d?.event_log?.find((e: any) => e.type === 'st
             <h2 class="mb-3 text-lg font-medium">Timeline</h2>
             <div>
               {d.event_log
-                .sort((a: any, b: any) => b.date.valueOf() - a.date.valueOf())
-                .map((event: any, idx: number, arr: any[]) => (
+                .sort((a: { date: Date }, b: { date: Date }) => b.date.valueOf() - a.date.valueOf())
+                .map((event: { type: string; date: Date; description: string }, idx: number, arr: { type: string; date: Date; description: string }[]) => (
                   <div
                     class={`relative flex gap-3 text-sm ${idx < arr.length - 1 ? 'pb-3' : 'pb-0'}`}
                   >
@@ -180,7 +199,7 @@ const startDate = d?.start_date ?? d?.event_log?.find((e: any) => e.type === 'st
           <div>
             <h2 class="mb-3 text-lg font-medium">Resources</h2>
             <div class="flex flex-wrap gap-2">
-              {d.links.map((link: any) => (
+              {d.links.map((link: { type: string; url: string | null }) => (
                 link.url && (
                   <a
                     href={link.url}
@@ -223,19 +242,10 @@ const startDate = d?.start_date ?? d?.event_log?.find((e: any) => e.type === 'st
           A curated collection of courses and papers I've studied, documenting my learning journey — what I studied, what I built, and what I learned along the way.
         </p>
       </section>
-      <div class="mb-6 flex gap-2 border-b pb-2">
-        <a href="/learning" class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors">
-          All ({allEntries.length})
-        </a>
-        <a href="/learning/courses" class="border-foreground border-b-2 font-medium inline-flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors">
-          <Icon name="lucide:book-open" class="size-4" />
-          Courses ({allCourses.length})
-        </a>
-        <a href="/learning/papers" class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors">
-          <Icon name="lucide:file-text" class="size-4" />
-          Papers ({allPapers.length})
-        </a>
-      </div>
+      <LearningTabs
+        activeTab="courses"
+        counts={{ all: allEntries.length, courses: allCourses.length, projects: allProjects, papers: allPapers.length }}
+      />
       <div class="flex flex-col gap-y-4">
         {entries.length === 0 && (
           <p class="text-muted-foreground py-8 text-center text-sm">No courses recorded yet.</p>

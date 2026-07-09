@@ -10,7 +10,8 @@ import { badgeVariants } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Layout from '@/layouts/layout.astro'
 import {
-  getAdjacentPosts,
+  getAdjacentParentPosts,
+  getAdjacentSubpost,
   getAllPostsAndSubposts,
   getCombinedReadingTime,
   getParentId,
@@ -39,20 +40,29 @@ const currentPostId = Astro.params.id
 const { Content, headings } = await render(post)
 
 const isCurrentSubpost = isSubpost(currentPostId)
-const navigation = await getAdjacentPosts(currentPostId)
-const parentPost = isCurrentSubpost ? await getParentPost(currentPostId) : null
 
-const hasChildPosts = await hasSubposts(currentPostId)
-const subpostCount = !isCurrentSubpost
-  ? await getSubpostCount(currentPostId)
-  : 0
-const postReadingTime = await getPostReadingTime(currentPostId)
+const [
+  navigation,
+  parentPost,
+  hasChildPosts,
+  subpostCount,
+  postReadingTime,
+  tocSections,
+] = await Promise.all([
+  isCurrentSubpost
+    ? getAdjacentSubpost(currentPostId)
+    : getAdjacentParentPosts(currentPostId).then((r) => ({ ...r, parent: null })),
+  isCurrentSubpost ? getParentPost(currentPostId) : Promise.resolve(null),
+  hasSubposts(currentPostId),
+  !isCurrentSubpost ? getSubpostCount(currentPostId) : Promise.resolve(0),
+  getPostReadingTime(currentPostId),
+  getTOCSections(currentPostId),
+])
+
 const combinedReadingTime =
   hasChildPosts && !isCurrentSubpost
     ? await getCombinedReadingTime(currentPostId)
     : null
-
-const tocSections = await getTOCSections(currentPostId)
 ---
 
 <Layout>

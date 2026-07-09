@@ -6,20 +6,31 @@ import Layout from '@/layouts/layout.astro'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Icon } from 'astro-icon/components'
+import LearningTabs from '@/components/learning-tabs.astro'
 import { getCollection, render } from 'astro:content'
 import { formatDate } from '@/lib/utils'
 import { getLearningWithPosts, filterByType } from '@/lib/learning-utils'
+import type { CollectionEntry } from 'astro:content'
+
+type ProjectData = CollectionEntry<'projects'>['data']
+
+type Path = {
+  params: { slug?: string }
+  props:
+    | { mode: 'detail'; entry: CollectionEntry<'projects'> }
+    | { mode: 'list'; entries: CollectionEntry<'projects'>[]; currentPage: number; lastPage: number }
+}
 
 export async function getStaticPaths() {
   const pageSize = 5
   const allProjects = await getCollection('projects')
-  const paths: any[] = []
+  const paths: Path[] = []
 
   for (const entry of allProjects) {
     const slug = entry.id.replace(/\.mdx$/, '')
     paths.push({
       params: { slug },
-      props: { mode: 'detail', entry },
+      props: { mode: 'detail' as const, entry },
     })
   }
 
@@ -27,7 +38,7 @@ export async function getStaticPaths() {
   if (allProjects.length === 0) {
     paths.push({
       params: { slug: undefined },
-      props: { mode: 'list', entries: [], currentPage: 1, lastPage: 1 },
+      props: { mode: 'list' as const, entries: [], currentPage: 1, lastPage: 1 },
     })
   }
   for (let i = 0; i < allProjects.length; i += pageSize) {
@@ -35,7 +46,7 @@ export async function getStaticPaths() {
     paths.push({
       params: { slug: pageNum === 1 ? undefined : String(pageNum) },
       props: {
-        mode: 'list',
+        mode: 'list' as const,
         entries: allProjects.slice(i, i + pageSize),
         currentPage: pageNum,
         lastPage,
@@ -46,15 +57,21 @@ export async function getStaticPaths() {
   return paths
 }
 
-const { mode, entry, entries, currentPage, lastPage } = Astro.props
+const { mode, entry, entries = [], currentPage = 1, lastPage = 1 } = Astro.props as {
+  mode?: string
+  entry?: CollectionEntry<'projects'>
+  entries?: CollectionEntry<'projects'>[]
+  currentPage?: number
+  lastPage?: number
+}
 
 const allEntries = await getLearningWithPosts()
 const allCourses = filterByType(allEntries, 'courses')
 const allPapers = filterByType(allEntries, 'paper-readings')
-const allProjects = (await getCollection('projects')).length
+const allProjectsCount = (await getCollection('projects')).length
 
-let d: any = null
-let rendered: any = null
+let d: ProjectData | null = null
+let rendered: { Content: any } | null = null
 
 if (mode === 'detail' && entry) {
   d = entry.data
@@ -63,7 +80,7 @@ if (mode === 'detail' && entry) {
 ---
 
 {
-  mode === 'detail' && entry ? (
+  mode === 'detail' && entry && d ? (
     <Layout>
       <PageHead slot="head" title={d.title} description={d.description} />
       <section class="grid grid-cols-[minmax(0px,1fr)_min(calc(var(--breakpoint-md)-2rem),100%)_minmax(0px,1fr)] gap-y-6">
@@ -137,32 +154,17 @@ if (mode === 'detail' && entry) {
           A curated collection of courses and papers I've studied, documenting my learning journey — what I studied, what I built, and what I learned along the way.
         </p>
       </section>
-      <div class="mb-6 flex gap-2 border-b pb-2">
-        <a href="/learning" class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors">
-          All ({allEntries.length})
-        </a>
-        <a href="/learning/courses" class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors">
-          <Icon name="lucide:book-open" class="size-4" />
-          Courses ({allCourses.length})
-        </a>
-        <a href="/learning/projects" class="border-foreground border-b-2 font-medium inline-flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors">
-          <Icon name="lucide:folder-kanban" class="size-4" />
-          Projects ({allProjects})
-        </a>
-        <a href="/learning/papers" class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors">
-          <Icon name="lucide:file-text" class="size-4" />
-          Papers ({allPapers.length})
-        </a>
-      </div>
+      <LearningTabs
+        activeTab="projects"
+        counts={{ all: allEntries.length, courses: allCourses.length, projects: allProjectsCount, papers: allPapers.length }}
+      />
       <div class="flex flex-col gap-y-4">
         {entries.length === 0 && (
           <p class="text-muted-foreground py-8 text-center text-sm">No projects recorded yet.</p>
         )}
-        {entries.map((p: any) => {
-          const projectSlug = p.id.replace(/\.mdx$/, '')
-          return (
+        {entries.map((p: CollectionEntry<'projects'>) => (
             <a
-              href={`/learning/projects/${projectSlug}`}
+              href={`/learning/projects/${p.id.replace(/\.mdx$/, '')}`}
               class="hover:bg-muted/50 rounded-xl border p-4 transition-colors duration-300 ease-in-out block"
             >
               <div class="flex flex-col gap-3">
@@ -185,8 +187,7 @@ if (mode === 'detail' && entry) {
                 )}
               </div>
             </a>
-          )
-        })}
+          ))}
       </div>
       <PaginationComponent currentPage={currentPage} totalPages={lastPage} baseUrl="/learning/projects/" client:load />
     </Layout>

@@ -1,0 +1,45 @@
+---
+import { Icon } from 'astro-icon/components'
+
+type TabCounts = {
+  all: number
+  courses: number
+  papers: number
+  projects: number
+}
+
+type Props = {
+  activeTab: 'all' | 'courses' | 'papers' | 'projects'
+  counts: TabCounts
+}
+
+const { activeTab, counts } = Astro.props
+
+const tabs = [
+  { id: 'all', href: '/learning', label: 'All', icon: null },
+  { id: 'courses', href: '/learning/courses', label: 'Courses', icon: 'lucide:book-open' },
+  { id: 'projects', href: '/learning/projects', label: 'Projects', icon: 'lucide:folder-kanban' },
+  { id: 'papers', href: '/learning/papers', label: 'Papers', icon: 'lucide:file-text' },
+] as const
+---
+
+<div class="mb-6 flex gap-2 border-b pb-2">
+  {
+    tabs.map((tab) => {
+      const isActive = activeTab === tab.id
+      return (
+        <a
+          href={tab.href}
+          class={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors${
+            isActive
+              ? ' border-foreground border-b-2 font-medium'
+              : ' text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          {tab.icon && <Icon name={tab.icon} class="size-4" />}
+          {tab.label} ({counts[tab.id as keyof TabCounts]})
+        </a>
+      )
+    })
+  }
+</div>

@@ -1,9 +1,7 @@
 ---
 import BlogCard from '@/components/blog-card.astro'
 import LearningCard from '@/components/learning-card.astro'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { Icon } from 'astro-icon/components'
+import ProjectCard from '@/components/project-card.astro'
 import Link from '@/components/link.astro'
 import PageHead from '@/components/page-head.astro'
 import TerminalIntro from '@/components/terminal-intro.astro'
@@ -13,7 +11,6 @@ import Layout from '@/layouts/layout.astro'
 import { getRecentPosts } from '@/lib/data-utils'
 import { getLearningWithPosts } from '@/lib/learning-utils'
 import { getCollection } from 'astro:content'
-import { formatDate } from '@/lib/utils'
 
 const blog = await getRecentPosts(SITE.featuredPostCount)
 const allLearning = await getLearningWithPosts()
@@ -27,7 +24,7 @@ const combined: CombinedItem[] = [
   ...allLearning.map((entry) => ({ type: 'learning' as const, entry })),
   ...allProjects.map((entry) => ({ type: 'project' as const, entry })),
 ]
-  .sort((a: any, b: any) => {
+  .sort((a, b) => {
     const dateA = a.type === 'learning'
       ? a.entry.data.start_date?.valueOf() ?? 0
       : a.entry.data.date.valueOf()
@@ -78,42 +75,12 @@ const combined: CombinedItem[] = [
     <ul class="flex flex-col gap-y-4">
       {
         combined.map((item) =>
-          item.type === 'learning' ? (
+            item.type === 'learning' ? (
             <li>
               <LearningCard entry={item.entry} />
             </li>
           ) : (
-            (() => {
-              const slug = item.entry.id.replace(/\.mdx$/, '')
-              return (
-                <li>
-                  <a
-                    href={`/learning/projects/${slug}`}
-                    class="hover:bg-muted/50 rounded-xl border p-4 transition-colors duration-300 ease-in-out block"
-                  >
-                    <div class="flex flex-col gap-3">
-                      <h3 class="text-lg font-medium">{item.entry.data.title}</h3>
-                      <div class="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
-                        <span>Projects</span>
-                        <Separator orientation="vertical" className="h-4!" />
-                        <span>{formatDate(item.entry.data.date)}</span>
-                      </div>
-                      <p class="text-muted-foreground text-sm">{item.entry.data.description}</p>
-                      {item.entry.data.labels && item.entry.data.labels.length > 0 && (
-                        <div class="flex flex-wrap gap-2">
-                          {item.entry.data.labels.map((label: string) => (
-                            <Badge variant="muted" className="flex items-center gap-x-1">
-                              <Icon name="lucide:hash" class="size-3" />
-                              {label}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </a>
-                </li>
-              )
-            })()
+            <ProjectCard entry={item.entry} />
           )
         )
       }

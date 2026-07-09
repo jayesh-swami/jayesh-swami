@@ -1,25 +1,77 @@
 ---
 import LearningCard from '@/components/learning-card.astro'
+import ProjectCard from '@/components/project-card.astro'
 import Breadcrumbs from '@/components/breadcrumbs.astro'
 import PageHead from '@/components/page-head.astro'
 import PaginationComponent from '@/components/ui/pagination'
 import Layout from '@/layouts/layout.astro'
+import LearningTabs from '@/components/learning-tabs.astro'
 import { getLearningWithPosts, filterByType } from '@/lib/learning-utils'
 import { getCollection } from 'astro:content'
-import { Icon } from 'astro-icon/components'
-import type { PaginateFunction } from 'astro'
+import type { LearningEntry } from '@/lib/learning-utils'
+import type { CollectionEntry } from 'astro:content'
 
-export async function getStaticPaths({ paginate }: { paginate: PaginateFunction }) {
-  const allEntries = await getLearningWithPosts()
-  return paginate(allEntries, { pageSize: 5 })
+type CombinedItem =
+  | { type: 'learning'; entry: LearningEntry }
+  | { type: 'project'; entry: CollectionEntry<'projects'> }
+
+type PageProps = {
+  entries: CombinedItem[]
+  currentPage: number
+  lastPage: number
 }
 
-const { page } = Astro.props
+export async function getStaticPaths() {
+  const pageSize = 5
+  const [learningEntries, projects] = await Promise.all([
+    getLearningWithPosts(),
+    getCollection('projects'),
+  ])
+
+  const combined: CombinedItem[] = [
+    ...learningEntries.map((entry) => ({ type: 'learning' as const, entry })),
+    ...projects.map((entry) => ({ type: 'project' as const, entry })),
+  ].sort((a, b) => {
+    const dateA = a.type === 'learning'
+      ? a.entry.data.start_date?.valueOf() ?? 0
+      : a.entry.data.date.valueOf()
+    const dateB = b.type === 'learning'
+      ? b.entry.data.start_date?.valueOf() ?? 0
+      : b.entry.data.date.valueOf()
+    return dateB - dateA
+  })
+
+  const lastPage = Math.ceil(combined.length / pageSize) || 1
+  const paths: { params: { page?: string }; props: PageProps }[] = []
+
+  for (let i = 0; i < combined.length; i += pageSize) {
+    const pageNum = Math.floor(i / pageSize) + 1
+    paths.push({
+      params: { page: pageNum === 1 ? undefined : String(pageNum) },
+      props: {
+        entries: combined.slice(i, i + pageSize),
+        currentPage: pageNum,
+        lastPage,
+      },
+    })
+  }
+
+  if (paths.length === 0) {
+    paths.push({
+      params: { page: undefined },
+      props: { entries: [], currentPage: 1, lastPage: 1 },
+    })
+  }
+
+  return paths
+}
+
+const { entries, currentPage, lastPage } = Astro.props as PageProps
 
 const allEntries = await getLearningWithPosts()
 const allCourses = filterByType(allEntries, 'courses')
 const allPapers = filterByType(allEntries, 'paper-readings')
-const allProjects = (await getCollection('projects')).length
+const allProjectsCount = (await getCollection('projects')).length
 ---
 
 <Layout class="max-w-3xl">
@@ -32,52 +84,31 @@ const allProjects = (await getCollection('projects')).length
 
   <section class="text-muted-foreground mb-6 text-sm leading-relaxed">
     <p>
-      A curated collection of courses and papers I've studied, documenting my learning journey — what I studied, what I built, and what I learned along the way.
+      Notes on courses and papers I've worked through: what I studied, what I built, what I took away.
     </p>
   </section>
 
-  <div class="mb-6 flex gap-2 border-b pb-2">
-    <a
-      href="/learning"
-      class="border-foreground border-b-2 font-medium inline-flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors"
-    >
-      All ({allEntries.length})
-    </a>
-    <a
-      href="/learning/courses"
-      class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors"
-    >
-      <Icon name="lucide:book-open" class="size-4" />
-      Courses ({allCourses.length})
-    </a>
-    <a
-      href="/learning/projects"
-      class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors"
-    >
-      <Icon name="lucide:folder-kanban" class="size-4" />
-      Projects ({allProjects})
-    </a>
-    <a
-      href="/learning/papers"
-      class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors"
-    >
-      <Icon name="lucide:file-text" class="size-4" />
-      Papers ({allPapers.length})
-    </a>
-  </div>
+  <LearningTabs
+    activeTab="all"
+    counts={{ all: allEntries.length + allProjectsCount, courses: allCourses.length, projects: allProjectsCount, papers: allPapers.length }}
+  />
 
   <div class="flex flex-col gap-y-4">
-    {page.data.length === 0 && (
+    {entries.length === 0 && (
       <p class="text-muted-foreground py-8 text-center text-sm">No entries recorded yet.</p>
     )}
-    {page.data.map((entry: any) => (
-      <LearningCard entry={entry} />
-    ))}
+    {entries.map((item) =>
+      item.type === 'learning' ? (
+        <LearningCard entry={item.entry} />
+      ) : (
+        <ProjectCard entry={item.entry} />
+      )
+    )}
   </div>
 
   <PaginationComponent
-    currentPage={page.currentPage}
-    totalPages={page.lastPage}
+    currentPage={currentPage}
+    totalPages={lastPage}
     baseUrl="/learning/"
     client:load
   />

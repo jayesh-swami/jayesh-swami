@@ -1,82 +1,65 @@
 ---
 import PageHead from '@/components/page-head.astro'
 import Layout from '@/layouts/layout.astro'
+
+interface TimelineItem {
+  date: string
+  title: string
+  subtitle: string
+  isLast?: boolean
+}
+
+const timeline: TimelineItem[] = [
+  { date: 'Aug 2017', title: 'BITS Pilani - Goa', subtitle: 'B.E. Computer Science' },
+  { date: 'May 2021', title: 'BrowserStack', subtitle: 'Software Engineer' },
+  { date: 'Jun 2022', title: 'CERN', subtitle: 'Fullstack Engineer' },
+  { date: 'Aug 2025', title: 'Career Break', subtitle: 'Taking time to recalibrate' },
+  { date: 'Sep 2026', title: 'IMT Atlantique', subtitle: 'MS in Data Science', isLast: true },
+]
 ---
 
 <Layout class="max-w-3xl">
   <PageHead slot="head" title="About" />
 
   <div class="p-4 sm:p-6">
-    <p class="text-sm text-muted-foreground mb-4">Hi there — here's a quick look at my journey.</p>
+    <p class="text-sm text-muted-foreground mb-4">I'm an engineer who's spent time building systems at places like BrowserStack and CERN, currently on a break to recalibrate before starting an MS in Data Science. I write here about the technical stuff I'm learning and the personal reflections along the way.</p>
     <h2 class="mb-6 text-lg font-medium">My Journey</h2>
 
     <div class="hidden sm:block">
-      <div class="relative flex gap-4 pb-10" style="opacity:0;animation:fadeInUp 0.5s ease-out 0.3s forwards">
-        <div class="relative hidden sm:flex flex-col items-center">
-          <div class="absolute left-1/2 top-6 bottom-0 w-px bg-border -translate-x-1/2" />
-          <div class="size-2 rounded-full bg-border shrink-0 mt-1.5 z-10" />
-        </div>
-        <div class="flex-1 min-w-0">
-          <span class="text-xs text-muted-foreground font-medium tabular-nums">Aug 2017</span>
-          <p class="text-sm font-medium">BITS Pilani - Goa</p>
-          <p class="text-xs text-muted-foreground">B.E. Computer Science</p>
-        </div>
-      </div>
-
-      <div class="relative flex gap-4 pb-10" style="opacity:0;animation:fadeInUp 0.5s ease-out 0.6s forwards">
-        <div class="relative hidden sm:flex flex-col items-center">
-          <div class="absolute left-1/2 top-6 bottom-0 w-px bg-border -translate-x-1/2" />
-          <div class="size-2 rounded-full bg-border shrink-0 mt-1.5 z-10" />
-        </div>
-        <div class="flex-1 min-w-0">
-          <span class="text-xs text-muted-foreground font-medium tabular-nums">May 2021</span>
-          <p class="text-sm font-medium">BrowserStack</p>
-          <p class="text-xs text-muted-foreground">Software Engineer</p>
-        </div>
-      </div>
-
-      <div class="relative flex gap-4 pb-10" style="opacity:0;animation:fadeInUp 0.5s ease-out 0.9s forwards">
-        <div class="relative hidden sm:flex flex-col items-center">
-          <div class="absolute left-1/2 top-6 bottom-0 w-px bg-border -translate-x-1/2" />
-          <div class="size-2 rounded-full bg-border shrink-0 mt-1.5 z-10" />
-        </div>
-        <div class="flex-1 min-w-0">
-          <span class="text-xs text-muted-foreground font-medium tabular-nums">Jun 2022</span>
-          <p class="text-sm font-medium">CERN</p>
-          <p class="text-xs text-muted-foreground">Fullstack Engineer</p>
-        </div>
-      </div>
-
-      <div class="relative flex gap-4 pb-10" style="opacity:0;animation:fadeInUp 0.5s ease-out 1.2s forwards">
-        <div class="relative hidden sm:flex flex-col items-center">
-          <div class="absolute left-1/2 top-6 bottom-0 w-px bg-border -translate-x-1/2" />
-          <div class="size-2 rounded-full bg-border shrink-0 mt-1.5 z-10" />
-        </div>
-        <div class="flex-1 min-w-0">
-          <span class="text-xs text-muted-foreground font-medium tabular-nums">Aug 2025</span>
-          <p class="text-sm font-medium">Career Break</p>
-          <p class="text-xs text-muted-foreground">Taking time to recalibrate</p>
-        </div>
-      </div>
-
-      <div class="relative flex gap-4" style="opacity:0;animation:fadeInUp 0.5s ease-out 1.5s forwards">
-        <div class="relative hidden sm:flex flex-col items-center">
-          <div class="size-2 rounded-full bg-green-500 shrink-0 mt-1.5 z-10 blink-pulse" />
-        </div>
-        <div class="flex-1 min-w-0">
-          <span class="text-xs text-muted-foreground font-medium tabular-nums">Sep 2026</span>
-          <p class="text-sm font-medium">IMT Atlantique</p>
-          <p class="text-xs text-muted-foreground">MS in Data Science</p>
-        </div>
-      </div>
+      {
+        timeline.map((item, index) => (
+          <div
+            class={`relative flex gap-4${item.isLast ? '' : ' pb-10'}`}
+            style={`opacity:0;animation:fadeInUp 0.5s ease-out ${0.3 + index * 0.3}s forwards`}
+          >
+            <div class="relative hidden sm:flex flex-col items-center">
+              {!item.isLast && (
+                <div class="absolute left-1/2 top-6 bottom-0 w-px bg-border -translate-x-1/2" />
+              )}
+              <div
+                class={`size-2 rounded-full shrink-0 mt-1.5 z-10${item.isLast ? ' bg-green-500 blink-pulse' : ' bg-border'}`}
+              />
+            </div>
+            <div class="flex-1 min-w-0">
+              <span class="text-xs text-muted-foreground font-medium tabular-nums">{item.date}</span>
+              <p class="text-sm font-medium">{item.title}</p>
+              <p class="text-xs text-muted-foreground">{item.subtitle}</p>
+            </div>
+          </div>
+        ))
+      }
     </div>
 
     <div class="sm:hidden space-y-3">
-      <div class="text-sm"><span class="text-muted-foreground font-medium tabular-nums">Aug 2017</span> — <span class="font-medium">BITS Pilani - Goa</span> <span class="text-muted-foreground">· B.E. Computer Science</span></div>
-      <div class="text-sm"><span class="text-muted-foreground font-medium tabular-nums">May 2021</span> — <span class="font-medium">BrowserStack</span> <span class="text-muted-foreground">· Software Engineer</span></div>
-      <div class="text-sm"><span class="text-muted-foreground font-medium tabular-nums">Jun 2022</span> — <span class="font-medium">CERN</span> <span class="text-muted-foreground">· Fullstack Engineer</span></div>
-      <div class="text-sm"><span class="text-muted-foreground font-medium tabular-nums">Aug 2025</span> — <span class="font-medium">Career Break</span> <span class="text-muted-foreground">· Taking time to recalibrate</span></div>
-      <div class="text-sm"><span class="text-muted-foreground font-medium tabular-nums">Sep 2026</span> — <span class="font-medium">IMT Atlantique</span> <span class="text-muted-foreground">· MS in Data Science</span></div>
+      {
+        timeline.map((item) => (
+          <div class="text-sm">
+            <span class="text-muted-foreground font-medium tabular-nums">{item.date}</span>
+            — <span class="font-medium">{item.title}</span>
+            <span class="text-muted-foreground"> · {item.subtitle}</span>
+          </div>
+        ))
+      }
     </div>
   </div>
 

@@ -27,53 +27,27 @@ export async function getAllTags(): Promise<Map<string, number>> {
   }, new Map<string, number>())
 }
 
-export async function getAdjacentPosts(currentId: string): Promise<{
+function sortSubpostsByDateAndOrder(
+  a: CollectionEntry<'blog'>,
+  b: CollectionEntry<'blog'>,
+): number {
+  const dateDiff = a.data.date.valueOf() - b.data.date.valueOf()
+  if (dateDiff !== 0) return dateDiff
+  return (a.data.order ?? 0) - (b.data.order ?? 0)
+}
+
+export async function getAdjacentParentPosts(
+  currentId: string,
+): Promise<{
   newer: CollectionEntry<'blog'> | null
   older: CollectionEntry<'blog'> | null
-  parent: CollectionEntry<'blog'> | null
 }> {
   const allPosts = await getAllPosts()
-
-  if (isSubpost(currentId)) {
-    const parentId = getParentId(currentId)
-    const allPosts = await getAllPosts()
-    const parent = allPosts.find((post) => post.id === parentId) || null
-
-    const posts = await getCollection('blog')
-    const subposts = posts
-      .filter(
-        (post) =>
-          isSubpost(post.id) &&
-          getParentId(post.id) === parentId &&
-          !post.data.draft,
-      )
-      .sort((a, b) => {
-        const dateDiff = a.data.date.valueOf() - b.data.date.valueOf()
-        if (dateDiff !== 0) return dateDiff
-
-        const orderA = a.data.order ?? 0
-        const orderB = b.data.order ?? 0
-        return orderA - orderB
-      })
-
-    const currentIndex = subposts.findIndex((post) => post.id === currentId)
-    if (currentIndex === -1) {
-      return { newer: null, older: null, parent }
-    }
-
-    return {
-      newer:
-        currentIndex < subposts.length - 1 ? subposts[currentIndex + 1] : null,
-      older: currentIndex > 0 ? subposts[currentIndex - 1] : null,
-      parent,
-    }
-  }
-
   const parentPosts = allPosts.filter((post) => !isSubpost(post.id))
   const currentIndex = parentPosts.findIndex((post) => post.id === currentId)
 
   if (currentIndex === -1) {
-    return { newer: null, older: null, parent: null }
+    return { newer: null, older: null }
   }
 
   return {
@@ -82,7 +56,40 @@ export async function getAdjacentPosts(currentId: string): Promise<{
       currentIndex < parentPosts.length - 1
         ? parentPosts[currentIndex + 1]
         : null,
-    parent: null,
+  }
+}
+
+export async function getAdjacentSubpost(
+  currentId: string,
+): Promise<{
+  newer: CollectionEntry<'blog'> | null
+  older: CollectionEntry<'blog'> | null
+  parent: CollectionEntry<'blog'> | null
+}> {
+  const parentId = getParentId(currentId)
+  const allPosts = await getAllPosts()
+  const parent = allPosts.find((post) => post.id === parentId) || null
+
+  const posts = await getCollection('blog')
+  const subposts = posts
+    .filter(
+      (post) =>
+        isSubpost(post.id) &&
+        getParentId(post.id) === parentId &&
+        !post.data.draft,
+    )
+    .sort(sortSubpostsByDateAndOrder)
+
+  const currentIndex = subposts.findIndex((post) => post.id === currentId)
+  if (currentIndex === -1) {
+    return { newer: null, older: null, parent }
+  }
+
+  return {
+    newer:
+      currentIndex < subposts.length - 1 ? subposts[currentIndex + 1] : null,
+    older: currentIndex > 0 ? subposts[currentIndex - 1] : null,
+    parent,
   }
 }
 
@@ -127,14 +134,7 @@ export async function getSubpostsForParent(
         isSubpost(post.id) &&
         getParentId(post.id) === parentId,
     )
-    .sort((a, b) => {
-      const dateDiff = a.data.date.valueOf() - b.data.date.valueOf()
-      if (dateDiff !== 0) return dateDiff
-
-      const orderA = a.data.order ?? 0
-      const orderB = b.data.order ?? 0
-      return orderA - orderB
-    })
+    .sort(sortSubpostsByDateAndOrder)
 }
 
 export function groupPostsByYear(
