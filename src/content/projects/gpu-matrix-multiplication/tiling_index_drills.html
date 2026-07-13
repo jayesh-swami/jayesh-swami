@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tiling Index Drills</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0c1512;
+    --panel:#12211c;
+    --panel-2:#0f1c17;
+    --hairline:#25392f;
+    --text:#e8efe9;
+    --muted:#8ba79c;
+    --muted-2:#5f7a70;
+    --gold:#d8b24c;
+    --gold-dim:#8f7735;
+    --teal:#4fd1c5;
+    --teal-dim:#2f6f68;
+    --good:#6fcf97;
+    --bad:#e08585;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:
+      linear-gradient(var(--hairline) 1px, transparent 1px) 0 0/100% 28px,
+      linear-gradient(90deg, var(--hairline) 1px, transparent 1px) 0 0/28px 100%,
+      var(--ink);
+    background-blend-mode:overlay, overlay, normal;
+    color:var(--text);
+    font-family:'IBM Plex Sans', sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  code, .mono{font-family:'JetBrains Mono', monospace;}
+  ::selection{background:var(--teal-dim); color:var(--text);}
+
+  a{color:var(--teal);}
+
+  .wrap{max-width:920px; margin:0 auto; padding:56px 24px 96px;}
+
+  /* ---------- header ---------- */
+  header{margin-bottom:40px;}
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.14em;
+    color:var(--teal);
+    text-transform:uppercase;
+    margin-bottom:14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:8px;height:8px;
+    background:var(--teal);
+    display:inline-block;
+    box-shadow:0 0 8px var(--teal);
+  }
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:clamp(32px, 5vw, 48px);
+    margin:0 0 14px;
+    letter-spacing:-0.01em;
+  }
+  header p.sub{
+    max-width:60ch;
+    color:var(--muted);
+    font-size:16px;
+    margin:0 0 24px;
+  }
+  header p.sub code{color:var(--text); background:var(--panel-2); padding:1px 6px; border-radius:var(--radius); font-size:14px;}
+
+  .statbar{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    border:1px solid var(--hairline);
+    background:var(--panel);
+    padding:12px 16px;
+    border-radius:var(--radius);
+    width:fit-content;
+  }
+  .led{
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    letter-spacing:0.06em;
+    color:var(--muted);
+  }
+  .led b{
+    color:var(--gold);
+    font-size:15px;
+    font-variant-numeric:tabular-nums;
+  }
+  .reset-btn{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    background:transparent;
+    border:1px solid var(--hairline);
+    color:var(--muted);
+    padding:6px 10px;
+    border-radius:var(--radius);
+    cursor:pointer;
+    letter-spacing:0.04em;
+  }
+  .reset-btn:hover{border-color:var(--teal); color:var(--teal);}
+
+  /* ---------- spec table ---------- */
+  .spec{
+    border:1px solid var(--hairline);
+    background:var(--panel);
+    border-radius:var(--radius);
+    margin:36px 0 44px;
+    overflow:hidden;
+  }
+  .spec-head{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--muted);
+    padding:10px 16px;
+    border-bottom:1px solid var(--hairline);
+    background:var(--panel-2);
+  }
+  .spec-row{
+    display:grid;
+    grid-template-columns:180px 1fr;
+    font-size:14px;
+    border-bottom:1px solid var(--hairline);
+  }
+  .spec-row:last-child{border-bottom:none;}
+  .spec-row div{padding:9px 16px;}
+  .spec-row .k{font-family:'JetBrains Mono', monospace; color:var(--gold); border-right:1px solid var(--hairline);}
+  .spec-row .v{color:var(--muted);}
+  .spec-row .v code{color:var(--text);}
+
+  /* ---------- signature visualizer ---------- */
+  .viz{
+    border:1px solid var(--hairline);
+    background:var(--panel);
+    border-radius:var(--radius);
+    margin:0 0 48px;
+  }
+  .viz-head{
+    padding:14px 18px;
+    border-bottom:1px solid var(--hairline);
+  }
+  .viz-head .eyebrow{margin-bottom:6px;}
+  .viz-head h2{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:19px;
+    margin:0 0 4px;
+  }
+  .viz-head p{margin:0; color:var(--muted); font-size:13.5px;}
+  .viz-body{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:0;
+  }
+  .viz-col{padding:20px; min-width:0; overflow:hidden;}
+  .viz-col + .viz-col{border-left:1px solid var(--hairline);}
+  .viz-col h3{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--muted-2);
+    margin:0 0 14px;
+  }
+  .matrix-grid{
+    display:grid;
+    grid-template-columns:repeat(6, 40px);
+    grid-auto-rows:40px;
+    gap:4px;
+    max-width:100%;
+    margin-bottom:16px;
+    overflow-x:auto;
+  }
+  .cell{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:var(--panel-2);
+    border:1px solid var(--hairline);
+    border-radius:var(--radius);
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    color:var(--muted);
+    cursor:pointer;
+    transition:background .12s, color .12s, border-color .12s;
+  }
+  .cell:focus-visible{outline:2px solid var(--teal); outline-offset:1px;}
+  .cell.active{
+    background:var(--teal-dim);
+    color:var(--ink);
+    background:var(--teal);
+    color:#04211d;
+    font-weight:600;
+    border-color:var(--teal);
+  }
+  .strip{
+    display:flex;
+    gap:4px;
+    max-width:100%;
+    overflow-x:auto;
+    padding-bottom:6px;
+    margin-bottom:16px;
+  }
+  .strip .cell{min-width:32px; width:32px; height:32px; font-size:11.5px; flex:0 0 auto;}
+  .readout{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12.5px;
+    color:var(--muted);
+    background:var(--panel-2);
+    border:1px solid var(--hairline);
+    border-radius:var(--radius);
+    padding:10px 12px;
+    min-height:40px;
+    display:flex;
+    align-items:center;
+  }
+  .readout b{color:var(--gold); font-weight:600;}
+  .lookup-input{
+    width:100%;
+    max-width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--hairline);
+    color:var(--text);
+    font-family:'JetBrains Mono', monospace;
+    font-size:14px;
+    padding:8px 10px;
+    border-radius:var(--radius);
+    margin-bottom:16px;
+  }
+  .lookup-input:focus{outline:none; border-color:var(--teal);}
+
+  /* ---------- sections ---------- */
+  section.tier{margin-bottom:52px;}
+  .tier-head{
+    display:flex;
+    align-items:baseline;
+    gap:12px;
+    margin-bottom:6px;
+    flex-wrap:wrap;
+  }
+  .tier-tag{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.1em;
+    padding:3px 8px;
+    border-radius:var(--radius);
+    text-transform:uppercase;
+    border:1px solid;
+  }
+  .tag-warm{color:#7fa89c; border-color:#33564c; background:rgba(79,209,197,0.05);}
+  .tag-core{color:var(--teal); border-color:var(--teal-dim); background:rgba(79,209,197,0.08);}
+  .tag-applied{color:#7fc7bd; border-color:var(--teal-dim); background:rgba(79,209,197,0.12);}
+  .tag-advanced{color:#e0c878; border-color:var(--gold-dim); background:rgba(216,178,76,0.08);}
+  .tag-debug{color:var(--gold); border-color:var(--gold-dim); background:rgba(216,178,76,0.14);}
+  .tag-synth{color:#f0d896; border-color:var(--gold); background:rgba(216,178,76,0.18);}
+  .tier-head h2{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:20px;
+    margin:0;
+  }
+  .tier-blurb{color:var(--muted); font-size:14px; margin:0 0 20px; max-width:62ch;}
+
+  /* ---------- question card ---------- */
+  .card{
+    border:1px solid var(--hairline);
+    background:var(--panel);
+    border-radius:var(--radius);
+    margin-bottom:14px;
+    overflow:hidden;
+  }
+  .card-top{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px 16px;
+    border-bottom:1px solid var(--hairline);
+    background:var(--panel-2);
+  }
+  .addr{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12.5px;
+    color:var(--gold);
+    letter-spacing:0.03em;
+  }
+  .card-body{padding:16px 18px 18px;}
+  .prompt{font-size:15px; margin:0 0 14px;}
+  .prompt code{
+    background:var(--panel-2);
+    border:1px solid var(--hairline);
+    padding:1px 6px;
+    border-radius:var(--radius);
+    font-size:13.5px;
+    color:#cfe8e0;
+  }
+  .codeblock{
+    display:block;
+    background:var(--panel-2);
+    border:1px solid var(--hairline);
+    border-radius:var(--radius);
+    padding:10px 12px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    color:#cfe8e0;
+    margin:10px 0 14px;
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+  .answer-row{
+    display:flex;
+    gap:10px;
+    align-items:stretch;
+    flex-wrap:wrap;
+  }
+  .answer-input{
+    flex:1 1 160px;
+    background:var(--panel-2);
+    border:1px solid var(--hairline);
+    color:var(--text);
+    font-family:'JetBrains Mono', monospace;
+    font-size:14px;
+    padding:9px 11px;
+    border-radius:var(--radius);
+    min-width:0;
+  }
+  textarea.answer-input{min-height:64px; resize:vertical; font-size:13.5px;}
+  .answer-input:focus{outline:none; border-color:var(--teal);}
+  .answer-input.correct{border-color:var(--good); box-shadow:0 0 0 1px var(--good) inset;}
+  .answer-input.incorrect{border-color:var(--bad); box-shadow:0 0 0 1px var(--bad) inset;}
+  .reveal-btn{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12.5px;
+    letter-spacing:0.05em;
+    background:transparent;
+    border:1px solid var(--teal-dim);
+    color:var(--teal);
+    padding:0 16px;
+    border-radius:var(--radius);
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .reveal-btn:hover{background:rgba(79,209,197,0.1);}
+  .explain{
+    display:none;
+    margin-top:14px;
+    padding:12px 14px;
+    background:var(--panel-2);
+    border-left:2px solid var(--gold);
+    border-radius:0 var(--radius) var(--radius) 0;
+    font-size:13.5px;
+    color:var(--muted);
+    white-space:pre-wrap;
+  }
+  .explain.show{display:block;}
+  .explain code{color:var(--text); font-family:'JetBrains Mono', monospace; font-size:13px;}
+  .explain b{color:var(--gold);}
+  .verdict{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11.5px;
+    letter-spacing:0.05em;
+    margin-top:8px;
+    display:none;
+  }
+  .verdict.show{display:inline-block;}
+  .verdict.ok{color:var(--good);}
+  .verdict.no{color:var(--bad);}
+
+  footer{
+    margin-top:60px;
+    padding-top:20px;
+    border-top:1px solid var(--hairline);
+    color:var(--muted-2);
+    font-size:13px;
+    font-family:'JetBrains Mono', monospace;
+  }
+
+  @media (max-width:720px){
+    .viz-body{grid-template-columns:1fr;}
+    .viz-col + .viz-col{border-left:none; border-top:1px solid var(--hairline);}
+    .spec-row{grid-template-columns:140px 1fr;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important; scroll-behavior:auto !important;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Shared-memory addressing &middot; 20 drills</div>
+    <h1>Tiling Index Drills</h1>
+    <p class="sub">Row-major memory doesn't know what a "row" or "column" is &mdash; it only understands one flat address. Every tiling bug traces back to <code>row * N + col</code> arithmetic done on autopilot. Work through these until it isn't.</p>
+    <div class="statbar">
+      <span class="led">DECODED &nbsp;<b id="progressCount">00</b> / 20</span>
+      <button class="reset-btn" onclick="location.reload()">Reset drill</button>
+    </div>
+  </header>
+
+  <div class="spec">
+    <div class="spec-head">Conventions used below</div>
+    <div class="spec-row"><div class="k">layout</div><div class="v">All matrices are <code>row-major</code>, flattened to 1D arrays.</div></div>
+    <div class="spec-row"><div class="k">A, B, C</div><div class="v">A is <code>M&times;K</code>, B is <code>K&times;N</code>, C = A&times;B is <code>M&times;N</code>.</div></div>
+    <div class="spec-row"><div class="k">TILE_DIM</div><div class="v">Square tile width. <code>blockDim.x = blockDim.y = TILE_DIM</code>.</div></div>
+    <div class="spec-row"><div class="k">row, col</div><div class="v">This thread's fixed global output coordinates in C.</div></div>
+    <div class="spec-row"><div class="k">t / tile</div><div class="v">Current tile index (0-based) inside the loop over the shared K dimension.</div></div>
+  </div>
+
+  <div class="viz">
+    <div class="viz-head">
+      <div class="eyebrow">Signature module</div>
+      <h2>Cell &hArr; Address</h2>
+      <p>A 4&times;6 matrix (N = 6), row-major, flattened into one strip. This is the exact mapping <code>row * N + col</code> is doing, every time.</p>
+    </div>
+    <div class="viz-body">
+      <div class="viz-col">
+        <h3>Hover a cell &rarr; decode its address</h3>
+        <div class="matrix-grid" id="matrixGrid"></div>
+        <div class="readout" id="readoutA">Hover or focus a cell to decode it &rarr;</div>
+      </div>
+      <div class="viz-col">
+        <h3>Type an address &rarr; decode its cell</h3>
+        <input class="lookup-input" id="lookupInput" type="number" min="0" max="23" placeholder="enter index 0&ndash;23">
+        <div class="strip" id="stripRow"></div>
+        <div class="readout" id="readoutB">Type an index above &rarr;</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sections"></div>
+
+  <footer>
+    // built for internalizing tile-load addressing &mdash; work top to bottom, section E is where most of the real bugs live.
+  </footer>
+
+</div>
+
+<script>
+/* ---------------- signature visualizer ---------------- */
+const VM = 4, VN = 6; // 4 rows x 6 cols demo matrix
+const matrixGrid = document.getElementById('matrixGrid');
+const stripRow = document.getElementById('stripRow');
+const readoutA = document.getElementById('readoutA');
+const readoutB = document.getElementById('readoutB');
+const lookupInput = document.getElementById('lookupInput');
+
+const gridCells = [];
+const stripCells = [];
+
+for (let r = 0; r < VM; r++){
+  for (let c = 0; c < VN; c++){
+    const idx = r * VN + c;
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.textContent = idx;
+    cell.tabIndex = 0;
+    cell.dataset.index = idx;
+    cell.addEventListener('mouseenter', () => decodeFromCell(r, c));
+    cell.addEventListener('focus', () => decodeFromCell(r, c));
+    matrixGrid.appendChild(cell);
+    gridCells.push(cell);
+  }
+}
+
+for (let idx = 0; idx < VM * VN; idx++){
+  const cell = document.createElement('div');
+  cell.className = 'cell';
+  cell.textContent = idx;
+  cell.dataset.index = idx;
+  stripRow.appendChild(cell);
+  stripCells.push(cell);
+}
+
+function clearActive(){
+  gridCells.forEach(c => c.classList.remove('active'));
+  stripCells.forEach(c => c.classList.remove('active'));
+}
+
+function decodeFromCell(r, c){
+  const idx = r * VN + c;
+  clearActive();
+  gridCells[idx].classList.add('active');
+  stripCells[idx].classList.add('active');
+  readoutA.innerHTML = 'cell (' + r + ', ' + c + ') &rarr; index = ' + r + '&times;' + VN + ' + ' + c + ' = <b>' + idx + '</b>';
+}
+
+lookupInput.addEventListener('input', () => {
+  const v = parseInt(lookupInput.value, 10);
+  if (isNaN(v) || v < 0 || v > (VM*VN - 1)){
+    clearActive();
+    readoutB.textContent = 'Type an index 0\u201323 \u2192';
+    return;
+  }
+  const r = Math.floor(v / VN);
+  const c = v % VN;
+  clearActive();
+  gridCells[v].classList.add('active');
+  stripCells[v].classList.add('active');
+  readoutB.innerHTML = 'index ' + v + ' &rarr; row = ' + v + ' / ' + VN + ' = <b>' + r + '</b>, col = ' + v + ' % ' + VN + ' = <b>' + c + '</b>';
+});
+
+/* ---------------- quiz data ---------------- */
+const sections = [
+  {
+    tag: 'warm', label: 'Warm-up',
+    title: 'Flattening Thread Indices',
+    blurb: 'Before 2D tiles make sense, get the raw index arithmetic into muscle memory.',
+    questions: [
+      {
+        id:'0x00', type:'numeric', answer:785,
+        prompt:'A 1D kernel is launched with <code>blockDim.x = 256</code>. For the thread with <code>blockIdx.x = 3</code> and <code>threadIdx.x = 17</code>, what is the global index <code>idx = blockIdx.x * blockDim.x + threadIdx.x</code>?',
+        explain:'idx = 3\u00d7256 + 17 = 768 + 17 = <b>785</b>. This is the formula you will reuse everywhere: block offset + local offset.'
+      },
+      {
+        id:'0x01', type:'reveal',
+        prompt:'Write the general formula for a 1D global thread index in terms of <code>blockIdx.x</code>, <code>blockDim.x</code>, and <code>threadIdx.x</code>.',
+        explain:'<code>idx = blockIdx.x * blockDim.x + threadIdx.x</code>\n<b>blockIdx.x * blockDim.x</b> finds where this block starts in the array. <b>threadIdx.x</b> walks forward inside it.'
+      },
+      {
+        id:'0x02', type:'numeric', answer:149,
+        prompt:'A 2D block has <code>blockDim.x = 16</code>, <code>blockDim.y = 16</code>. Flattening with y as the outer (slower) dimension: <code>localId = threadIdx.y * blockDim.x + threadIdx.x</code>. For <code>threadIdx.x = 5</code>, <code>threadIdx.y = 9</code>, what is <code>localId</code>?',
+        explain:'localId = 9\u00d716 + 5 = 144 + 5 = <b>149</b>.'
+      },
+      {
+        id:'0x03', type:'numeric', answer:89,
+        prompt:'Same thread, but flip the convention so x is outer: <code>localId = threadIdx.x * blockDim.y + threadIdx.y</code>. What is <code>localId</code> now?',
+        explain:'localId = 5\u00d716 + 9 = 80 + 9 = <b>89</b>.\n89 \u2260 149 \u2014 the two flattenings are NOT interchangeable. Whichever convention you flatten with, you must un-flatten with the matching one. This exact swap (x-major vs y-major) is one of the most common sources of the row/col mix-ups you\u2019re running into.'
+      }
+    ]
+  },
+  {
+    tag: 'core', label: 'Core',
+    title: 'Global Row/Col in a 2D Grid',
+    blurb: 'Every tiled kernel starts by figuring out which output element this thread owns.',
+    questions: [
+      {
+        id:'0x04', type:'reveal',
+        prompt:'A kernel computes one element of an M\u00d7N output matrix per thread, with <code>blockDim = (TILE_DIM, TILE_DIM)</code>. Write the formulas for this thread\u2019s global <code>row</code> and <code>col</code>.',
+        explain:'<code>row = blockIdx.y * blockDim.y + threadIdx.y</code>\n<code>col = blockIdx.x * blockDim.x + threadIdx.x</code>\nNotice: <b>row</b> comes from the <code>.y</code> axis, <b>col</b> comes from the <code>.x</code> axis. Mixing these up is the single most common bug in tiled kernels.'
+      },
+      {
+        id:'0x05', type:'numeric', answer:37,
+        prompt:'<code>TILE_DIM = 16</code>, <code>blockIdx.y = 2</code>, <code>threadIdx.y = 5</code>. What is <code>row</code>?',
+        explain:'row = 2\u00d716 + 5 = <b>37</b>.'
+      },
+      {
+        id:'0x06', type:'numeric', answer:75,
+        prompt:'<code>TILE_DIM = 16</code>, <code>blockIdx.x = 4</code>, <code>threadIdx.x = 11</code>. What is <code>col</code>?',
+        explain:'col = 4\u00d716 + 11 = <b>75</b>.'
+      }
+    ]
+  },
+  {
+    tag: 'core', label: 'Core',
+    title: 'Row-Major Linearization',
+    blurb: '"row" and "col" are for humans. GPU memory only understands one flat address.',
+    questions: [
+      {
+        id:'0x07', type:'reveal',
+        prompt:'A matrix with width <code>N</code> is stored row-major as a flat 1D array. Write the formula that converts <code>(row, col)</code> into a 1D index.',
+        explain:'<code>index = row * N + col</code>\nYou skip <b>row</b> full rows of length N, then step <b>col</b> more into the current row.'
+      },
+      {
+        id:'0x08', type:'numeric', answer:4811,
+        prompt:'<code>row = 37</code>, <code>col = 75</code>, <code>N = 128</code>. What is the 1D index?',
+        explain:'index = 37\u00d7128 + 75 = 4736 + 75 = <b>4811</b>.'
+      },
+      {
+        id:'0x09', type:'reveal',
+        prompt:'A flat array has width <code>N = 128</code>. What <code>row</code> and <code>col</code> does index <code>4811</code> correspond to? Give both.',
+        explain:'<code>row = idx / N = 4811 / 128 = 37</code> (integer division)\n<code>col = idx % N = 4811 % 128 = 75</code>\nDivision undoes the "skip full rows" step; modulo gives what\u2019s left over inside the current row. Same numbers as 0x05\u20130x08, run in reverse \u2014 that\u2019s not a coincidence.'
+      }
+    ]
+  },
+  {
+    tag: 'applied', label: 'Applied',
+    title: 'Tiling Fundamentals',
+    blurb: 'A tile is just a TILE_DIM-wide window you slide across the shared dimension.',
+    questions: [
+      {
+        id:'0x0A', type:'numeric', answer:5,
+        prompt:'A matrix dimension is <code>130</code>, and <code>TILE_DIM = 32</code>. How many tiles are needed to cover it completely (ceiling division)?',
+        explain:'4\u00d732 = 128, which is short of 130, so you need a 5th, partly-empty tile. <b>numTiles = 5</b>.'
+      },
+      {
+        id:'0x0B', type:'reveal',
+        prompt:'Write the general integer-division formula for <code>numTiles</code> given a dimension <code>K</code> and <code>TILE_DIM</code>, without relying on a <code>ceil()</code> call.',
+        explain:'<code>numTiles = (K + TILE_DIM - 1) / TILE_DIM</code> using integer division.\nAdding <code>TILE_DIM - 1</code> before dividing forces any nonzero remainder to round up.'
+      },
+      {
+        id:'0x0C', type:'reveal',
+        prompt:'Inside the loop over tiles, let <code>t</code> be the current tile index (0-based). A thread wants the global column of matrix A it should read during this tile, using its own <code>threadIdx.x</code> as the offset inside the tile. Write that expression.',
+        explain:'<code>colInA = t * TILE_DIM + threadIdx.x</code>\n<code>t * TILE_DIM</code> finds where tile <code>t</code> starts along that dimension; <code>threadIdx.x</code> is this thread\u2019s offset inside it.'
+      }
+    ]
+  },
+  {
+    tag: 'advanced', label: 'Advanced',
+    title: 'Loading Tiles Into Shared Memory',
+    blurb: 'This is where your example line lives. Two matrices, two different sweep directions \u2014 and it\u2019s not arbitrary.',
+    questions: [
+      {
+        id:'0x0D', type:'reveal',
+        prompt:'Matrix A is M\u00d7K, row-major. This thread already knows its fixed global <code>row</code>. Shared memory is declared <code>As[TILE_DIM][TILE_DIM]</code>. Write the line that loads this thread\u2019s element of tile <code>t</code> of A.',
+        explain:'<code>As[threadIdx.y][threadIdx.x] = A[row * K + (t * TILE_DIM + threadIdx.x)];</code>\n<code>row</code> is fixed for this thread (shared by every thread in its block-row), so it\u2019s <code>threadIdx.x</code> that has to sweep across the tile \u2014 and because A is row-major, that\u2019s also the direction where consecutive threads in a warp touch consecutive memory addresses (coalesced).'
+      },
+      {
+        id:'0x0E', type:'reveal',
+        prompt:'Matrix B is K\u00d7N, row-major. This thread already knows its fixed global <code>col</code>. Shared memory is <code>Bs[TILE_DIM][TILE_DIM]</code>. Write the line that loads this thread\u2019s element of tile <code>t</code> of B.',
+        explain:'<code>Bs[threadIdx.y][threadIdx.x] = B[(t * TILE_DIM + threadIdx.y) * N + col];</code>\nHere <code>col</code> is fixed, so <code>threadIdx.y</code> sweeps across the tile \u2014 the offset moves down B\u2019s rows, along the shared K dimension.'
+      },
+      {
+        id:'0x0F', type:'reveal',
+        prompt:'In a sentence or two: why does A\u2019s tile-load sweep with <code>threadIdx.x</code>, but B\u2019s sweeps with <code>threadIdx.y</code>, even though both are loading the "same" TILE_DIM\u00d7TILE_DIM tile shape?',
+        explain:'It\u2019s not about the shared-memory shape \u2014 it\u2019s about which of the thread\u2019s coordinates is already fixed, and which direction you\u2019re marching in each <b>source</b> matrix. For A, <code>row</code> is fixed and you march along A\u2019s columns (K), so <code>threadIdx.x</code> gives coalesced access since A is row-major. For B, <code>col</code> is fixed and you march along B\u2019s rows (K), which has to be <code>threadIdx.y</code> because <code>threadIdx.x</code> is already spoken for by <code>col</code>. Swap either one and you load a transposed or simply wrong tile.'
+      },
+      {
+        id:'0x10', type:'reveal',
+        prompt:'After <code>__syncthreads()</code>, write the loop body that accumulates the dot product for this thread\u2019s output element using <code>As</code> and <code>Bs</code>.',
+        explain:'<code>for (int k = 0; k &lt; TILE_DIM; k++) {\n&nbsp;&nbsp;sum += As[threadIdx.y][k] * Bs[k][threadIdx.x];\n}</code>\n<code>As[threadIdx.y][k]</code> walks along this thread\u2019s row of the A-tile; <code>Bs[k][threadIdx.x]</code> walks down this thread\u2019s column of the B-tile. Their product-sum is exactly one term of the row\u00b7col dot product, accumulated tile by tile.'
+      }
+    ]
+  },
+  {
+    tag: 'advanced', label: 'Advanced',
+    title: 'Bank Conflicts',
+    blurb: 'Correct indices can still be slow indices.',
+    questions: [
+      {
+        id:'0x11', type:'reveal',
+        prompt:'Declaring shared memory as <code>float tile[TILE_DIM][TILE_DIM]</code> can cause bank conflicts for certain access patterns (e.g. a transpose kernel reading <code>tile[threadIdx.x][k]</code> down a column). What\u2019s the one-line fix, and why does it work?',
+        explain:'Pad the row: <code>float tile[TILE_DIM][TILE_DIM + 1];</code>\nAdding one extra column shifts where each row starts in memory, so column-wise accesses that used to land on the same bank for every thread now land on different banks \u2014 no change needed to your read/write indexing math.'
+      }
+    ]
+  },
+  {
+    tag: 'debug', label: 'Debug',
+    title: 'Find The Bug',
+    blurb: 'The line you actually sent me. Let\u2019s see it with fresh eyes.',
+    questions: [
+      {
+        id:'0x12', type:'reveal',
+        prompt:'Here\u2019s a real line from a tiling kernel:',
+        code:'lds1[threadIdx.y][threadIdx.x] = array1[row * N + (tile * TILE_DIM + threadIdx.y)];',
+        promptAfter:'<code>array1</code> is a row-major M\u00d7N matrix, <code>row</code> is this thread\u2019s fixed global row, and the intent is for the block to cooperatively and coalesced-ly load one TILE_DIM\u00d7TILE_DIM tile of <code>array1</code>. What\u2019s wrong, and what\u2019s the fix?',
+        explain:'The sweep offset uses <code>threadIdx.y</code>, but it should use <code>threadIdx.x</code>. <code>row</code> is already fixed per thread-row, so the only thing that should vary the global address across a warp is <code>threadIdx.x</code> \u2014 and since <code>array1</code> is row-major, <code>threadIdx.x</code> also lines up with contiguous memory, which is what makes the load coalesced. As written, every thread in a warp (same y, different x) computes the <b>identical</b> address, so they all fetch the same value instead of spreading across the tile.\n\nFix: <code>lds1[threadIdx.y][threadIdx.x] = array1[row * N + (tile * TILE_DIM + threadIdx.x)];</code>'
+      }
+    ]
+  },
+  {
+    tag: 'synth', label: 'Synthesis',
+    title: 'Put It All Together',
+    blurb: 'No hints, no scaffolding \u2014 the way it\u2019ll actually show up in your code.',
+    questions: [
+      {
+        id:'0x13', type:'reveal',
+        prompt:'From scratch: A is M\u00d7K, B is K\u00d7N, C is M\u00d7N, all row-major, square tiles of size <code>TILE_DIM</code>, <code>blockDim = (TILE_DIM, TILE_DIM)</code>. Write, in order: <b>row &amp; col</b>, <b>numTiles</b>, the <b>As load line</b>, the <b>Bs load line</b>, and the <b>accumulation line</b> for one thread computing <code>C[row][col]</code>.',
+        explain:'<code>int row = blockIdx.y * TILE_DIM + threadIdx.y;\nint col = blockIdx.x * TILE_DIM + threadIdx.x;\nint numTiles = (K + TILE_DIM - 1) / TILE_DIM;\n\n// per tile t:\nAs[threadIdx.y][threadIdx.x] = A[row * K + (t * TILE_DIM + threadIdx.x)];\nBs[threadIdx.y][threadIdx.x] = B[(t * TILE_DIM + threadIdx.y) * N + col];\n__syncthreads();\n\nfor (int k = 0; k &lt; TILE_DIM; k++)\n&nbsp;&nbsp;sum += As[threadIdx.y][k] * Bs[k][threadIdx.x];\n__syncthreads();</code>\n\nIf every line above felt automatic rather than something you had to re-derive, the index math has done its job.'
+      }
+    ]
+  }
+];
+
+/* ---------------- render ---------------- */
+const tagClass = {warm:'tag-warm', core:'tag-core', applied:'tag-applied', advanced:'tag-advanced', debug:'tag-debug', synth:'tag-synth'};
+const container = document.getElementById('sections');
+const revealed = new Set();
+
+sections.forEach(sec => {
+  const secEl = document.createElement('section');
+  secEl.className = 'tier';
+
+  const head = document.createElement('div');
+  head.className = 'tier-head';
+  head.innerHTML = '<span class="tier-tag ' + tagClass[sec.tag] + '">' + sec.label + '</span><h2>' + sec.title + '</h2>';
+  secEl.appendChild(head);
+
+  const blurb = document.createElement('p');
+  blurb.className = 'tier-blurb';
+  blurb.textContent = sec.blurb;
+  secEl.appendChild(blurb);
+
+  sec.questions.forEach(q => {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const top = document.createElement('div');
+    top.className = 'card-top';
+    top.innerHTML = '<span class="addr">' + q.id + '</span>';
+    card.appendChild(top);
+
+    const body = document.createElement('div');
+    body.className = 'card-body';
+
+    const p = document.createElement('p');
+    p.className = 'prompt';
+    p.innerHTML = q.prompt;
+    body.appendChild(p);
+
+    if (q.code){
+      const cb = document.createElement('code');
+      cb.className = 'codeblock';
+      cb.textContent = q.code;
+      body.appendChild(cb);
+    }
+    if (q.promptAfter){
+      const p2 = document.createElement('p');
+      p2.className = 'prompt';
+      p2.innerHTML = q.promptAfter;
+      body.appendChild(p2);
+    }
+
+    const row = document.createElement('div');
+    row.className = 'answer-row';
+
+    let input;
+    if (q.type === 'numeric'){
+      input = document.createElement('input');
+      input.type = 'text';
+      input.inputMode = 'numeric';
+      input.placeholder = 'your answer';
+    } else {
+      input = document.createElement('textarea');
+      input.placeholder = 'sketch your answer (optional) \u2014 then reveal to check yourself';
+    }
+    input.className = 'answer-input';
+    row.appendChild(input);
+
+    const btn = document.createElement('button');
+    btn.className = 'reveal-btn';
+    btn.textContent = q.type === 'numeric' ? 'Check + reveal' : 'Reveal answer';
+    row.appendChild(btn);
+
+    body.appendChild(row);
+
+    const verdict = document.createElement('div');
+    verdict.className = 'verdict';
+    body.appendChild(verdict);
+
+    const explain = document.createElement('div');
+    explain.className = 'explain';
+    explain.innerHTML = q.explain;
+    body.appendChild(explain);
+
+    btn.addEventListener('click', () => {
+      if (q.type === 'numeric'){
+        const val = parseFloat(input.value);
+        if (!isNaN(val)){
+          const ok = val === q.answer;
+          input.classList.remove('correct','incorrect');
+          input.classList.add(ok ? 'correct' : 'incorrect');
+          verdict.classList.add('show');
+          verdict.classList.remove('ok','no');
+          verdict.classList.add(ok ? 'ok' : 'no');
+          verdict.textContent = ok ? '\u2713 correct \u2014 ' + q.answer : '\u2717 not quite \u2014 correct answer is ' + q.answer;
+        }
+      }
+      explain.classList.add('show');
+      if (!revealed.has(q.id)){
+        revealed.add(q.id);
+        document.getElementById('progressCount').textContent = String(revealed.size).padStart(2,'0');
+      }
+    });
+
+    card.appendChild(body);
+    secEl.appendChild(card);
+  });
+
+  container.appendChild(secEl);
+});
+</script>
+</body>
+</html>

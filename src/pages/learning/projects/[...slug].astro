@@ -27,9 +27,8 @@ export async function getStaticPaths() {
   const paths: Path[] = []
 
   for (const entry of allProjects) {
-    const slug = entry.id.replace(/\.mdx$/, '')
     paths.push({
-      params: { slug },
+      params: { slug: entry.id },
       props: { mode: 'detail' as const, entry },
     })
   }
@@ -95,30 +94,6 @@ if (mode === 'detail' && entry) {
               <span>{formatDate(d.date)}</span>
             </div>
           </div>
-          <div class="flex flex-wrap gap-2">
-            {d.github && (
-              <a
-                href={d.github}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="border-muted-foreground/20 hover:bg-muted inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors"
-              >
-                <Icon name="lucide:github" class="size-3.5" />
-                GitHub
-              </a>
-            )}
-            {d.website && (
-              <a
-                href={d.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="border-muted-foreground/20 hover:bg-muted inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors"
-              >
-                <Icon name="lucide:external-link" class="size-3.5" />
-                Website
-              </a>
-            )}
-          </div>
           {d.labels && d.labels.length > 0 && (
             <div class="flex flex-wrap gap-2">
               {d.labels.map((label: string) => (
@@ -133,6 +108,46 @@ if (mode === 'detail' && entry) {
             <article class="prose max-w-none">
               <rendered.Content />
             </article>
+          )}
+          {(d.github || d.website || d.resources.length > 0) && (
+            <div>
+              <h2 class="mb-3 text-lg font-medium">Resources</h2>
+              <div class="flex flex-wrap gap-2">
+                {d.github && (
+                  <a
+                    href={d.github}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="border-muted-foreground/20 hover:bg-muted inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors"
+                  >
+                    <Icon name="lucide:github" class="size-3.5" />
+                    GitHub
+                  </a>
+                )}
+                {d.website && (
+                  <a
+                    href={d.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="border-muted-foreground/20 hover:bg-muted inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors"
+                  >
+                    <Icon name="lucide:external-link" class="size-3.5" />
+                    Website
+                  </a>
+                )}
+                {d.resources.map((resource: { title: string; url: string }) => (
+                  <a
+                    href={resource.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="border-muted-foreground/20 hover:bg-muted inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors"
+                  >
+                    <Icon name="lucide:external-link" class="size-3.5" />
+                    {resource.title}
+                  </a>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </section>

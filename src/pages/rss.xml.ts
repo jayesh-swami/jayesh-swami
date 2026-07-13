@@ -29,7 +29,7 @@ export async function GET(context: APIContext) {
         title: project.data.title,
         description: project.data.description,
         pubDate: project.data.date,
-        link: `/learning/projects/${project.id.replace(/\.mdx$/, '')}/`,
+        link: `/learning/projects/${project.id.split('/').slice(-2, -1)[0]}/`,
       })),
     ].sort((a, b) => b.pubDate.valueOf() - a.pubDate.valueOf())
 

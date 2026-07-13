@@ -1,0 +1,172 @@
+---
+title: Matrix Multiplication Kernel - GPU Programming Basics
+description: A tiled matrix multiplication kernel optimized to use the LDS cache in AMD architecture
+date: 2026-07-13
+github: https://github.com/jayesh-swami/amd-gpu-prog-learn
+labels:
+  - gpu-programming
+  - linear-algebra
+  - cpp
+resources:
+  - title: Indexing Practice Drill
+    url: https://github.com/jayesh-swami/amd-gpu-prog-learn/blob/main/practice/Tiling%20Index%20Drills%20(Claude%20gen).html
+---
+
+This is a learning project I made with Gemini to learn the basics of GPU programming by implementing a matrix multiplication kernel. I wanted to test the findings in [“A Flexible Class of Parallel Matrix Multiplication Algorithms” (Gunnels et al.)](https://www.cs.utexas.edu/~lin/papers/ipps98.pdf) which discusses how different matrix shapes affect the performance of parallelized matrix multiplication algorithms. My device has the “AMD RYZEN AI MAX+ 395,” which uses the AMD Radeon 8060S Graphics chip, so I implemented this code using the AMD HIP runtime.
+
+This project is divided into 4 challenges, and by the end of it, these were my takeaways:
+
+1. Learned how to allocate and transfer memory between the GPU (device) and CPU (host).
+2. Understood how the SIMD (Single Instruction Multiple Data) model of GPUs works.
+3. Implemented a naive matrix multiplication kernel with no optimizations.
+4. Implemented a kernel that takes advantage of the LDS (Local Data Share), the block-level cache inside AMD GPUs, to store tiles of the matrix and reduce the trips to global memory.
+5. Learned to use the AMD profiler rocprofv3 to check GPU usage stats and compare the naive and LDS-optimized kernels.
+
+I was struggling to understand the math behind block index, tile index, and global and local rows and columns, so I created this 20-question drill to help me build better intuition. I will add the link to the quiz at the end of the post.
+
+It was really fun to learn this and see how big the difference was between the naive kernel and the LDS-optimized kernel, which was about 4x faster, clocking in at about 1.3 TFLOPS. From there, I realized that while 1.5 TFLOPS was decent, it was nowhere near the performance of real-world production code that leverages architecture-specific optimizations. I found that there were a plethora of optimizations still on the table, and to get a sense of the possible performance gains, I asked AI to show me one. The optimization was to use the HIP runtime’s __half and __half2 data types and take advantage of packing 2 16-bit floats into 32-bit registers, allowing 2 values to be computed in a single cycle. This kernel was running about 9x faster than the naive kernel, clocking in at about 2.7 TFLOPS. 
+
+| Kernel Version | Optimization Strategy | Performance | Speedup vs. Naive |
+| :--- | :--- | :--- | :--- |
+| **Naive Kernel** | Direct Global VRAM Fetches | ~285 GFLOPS | Base |
+| **Optimized Kernel** | LDS Shared Memory Caching | ~1.3 - 1.5 TFLOPS | **~4x Faster** |
+| **Super Optimized (`half2`)** | 16-bit Packed Register Math | **~2.7 TFLOPS** | **~9x Faster** |
+
+Although there were still quite a few optimizations that could be done to the kernel, I decided to leave them for now and return later to deepen my understanding of GPU programming.
+
+If you would like to see all the steps of the project, I have included the link to the GitHub repository below. If you just want to check the code for the 3 kernels, I've attached it below in the post.
+
+<details open>
+  <summary><b>Naive Kernel Code</b></summary>
+
+  ```cpp
+  __global__ void multiply_two_arrays_naive(float array1[], float array2[], float result[], int M, int N, int K) {
+
+      // Calculating row and cols for array1 and array2
+      int row = blockIdx.y * blockDim.y + threadIdx.y;
+      int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+      // Fetching each time from memory and dot product of row and col
+      if (row < M && col < K) {
+        float res = 0.0f;
+        for(int i = 0; i < N; i++) {
+            res += array1[row * N + i] * array2[i * K + col];
+        }
+        result[row * K + col] = res;
+      }
+  }
+  ```
+</details>
+
+<details>
+  <summary><b>LDS Optimized Kernel Code</b></summary>
+
+  ```cpp
+  __global__ void multiply_two_arrays_lds_optimized(float array1[], float array2[], float result[], int M, int N, int K) {
+
+      // Calculating global row and cols for array1 and array2
+      int row = blockIdx.y * TILE_DIM + threadIdx.y;
+      int col = blockIdx.x * TILE_DIM + threadIdx.x;
+
+      __shared__ float lds1[TILE_DIM][TILE_DIM];
+      __shared__ float lds2[TILE_DIM][TILE_DIM];
+
+      float res = 0.0f;
+
+      for(int tile = 0; tile < (N + TILE_DIM - 1)/TILE_DIM; tile++) {
+
+        /** 
+          Here to better understand the intuition behind 2d matrix to 1d matrix and tiling on top of that.
+          I have included a small mathematical drill that I generated from AI that helped me get better
+          intuition about these index conversions
+        */ 
+
+        if(row < M && tile * TILE_DIM + threadIdx.x < N) {
+          lds1[threadIdx.y][threadIdx.x] = array1[row * N + (tile * TILE_DIM + threadIdx.x)];
+        } else {
+          lds1[threadIdx.y][threadIdx.x] = 0.0f;
+        }
+
+        if(col < K && tile * TILE_DIM + threadIdx.y < N) {
+          lds2[threadIdx.y][threadIdx.x] = array2[(tile * TILE_DIM + threadIdx.y) * K + col];
+        } else {
+          lds2[threadIdx.y][threadIdx.x] = 0.0f;
+        }
+
+        // syncing threads so that all have loaded the data and we do not perform operation on stale data
+        __syncthreads();
+
+        for(int i = 0; i < TILE_DIM; i++) {
+          res += lds1[threadIdx.y][i] * lds2[i][threadIdx.x];
+        }
+
+        // Again syncinc here so that next operation is not started until all threads are finished
+        __syncthreads();
+      }
+      if(row < M && col < K) {
+        result[row * K + col] = res;
+      }
+  }
+  ```
+</details>
+
+<details>
+  <summary><b>16-bit Packed Register Math with __half2 Kernel Code</b></summary>
+
+  ```cpp
+  __global__ void multiply_two_arrays_half2(__half array1[], __half array2[], __half result[], int M, int N, int K)  {
+      // Target Block Dimensions: x = 16, y = 32 (512 threads total)
+      int tx = threadIdx.x; // Ranges from 0 to 15
+      int ty = threadIdx.y; // Ranges from 0 to 31
+      int bx = blockIdx.x;
+      int by = blockIdx.y;
+
+      int row = by * 32 + ty;
+      // Each thread calculates TWO consecutive columns at once
+      int col = (bx * 16 + tx) * 2; 
+
+      // Allocate our shared tiles
+      __shared__ __half ldsA[32][32];
+      __shared__ __half2 ldsB[32][16]; // Packed along the K (column) dimension
+
+      // Reinterpret global pointers to issue ultra-fast 32-bit vectorized loads
+      const __half2* A_half2 = (const __half2*)array1;
+      const __half2* B_half2 = (const __half2*)array2;
+
+      // Initialize an accumulator holding two 16-bit zeros
+      __half2 value2 = __float2half2_rn(0.0f);
+
+      int num_tiles = N / 32;
+      for (int t = 0; t < num_tiles; ++t) {
+          
+          // 1. Vectorized Memory Load (Global -> LDS)
+          // Load two elements of A and store them into our flat __half local array
+          ((__half2*)ldsA)[ty * 16 + tx] = A_half2[row * (N / 2) + (t * 16 + tx)];
+
+          // Load two elements of B directly into our packed __half2 local array
+          ldsB[ty][tx] = B_half2[(t * 32 + ty) * (K / 2) + (bx * 16 + tx)];
+
+          __syncthreads();
+
+          // 2. The Packed Math Core Loop
+          for (int k = 0; k < 32; ++k) {
+              // Broadcast the single A element into both halves of a register: [A, A]
+              __half2 a2 = __half2half2(ldsA[ty][k]);
+              
+              // Execute TWO Fused Multiply-Adds in a single GPU clock cycle!
+              // value2.x += a2.x * ldsB.x
+              // value2.y += a2.y * ldsB.y
+              value2 = __hfma2(a2, ldsB[k][tx], value2);
+          }
+
+          __syncthreads();
+      }
+
+      // 3. Vectorized Write-Back to Global Memory
+      if (row < M && col < K) {
+          __half2* res_half2 = (__half2*)result;
+          res_half2[row * (K / 2) + (bx * 16 + tx)] = value2;
+      }
+  }
+  ```
+</details>

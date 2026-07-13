@@ -42,3 +42,7 @@ After every change, go through this checklist and run only the tests relevant to
 
 ### If you touched `src/pages/about.astro`
 - [ ] Timeline renders all entries with correct dates and titles
+
+### If you touched `src/content.config.ts`
+- [ ] All collection loaders point to correct directories
+- [ ] All existing content still builds without errors
