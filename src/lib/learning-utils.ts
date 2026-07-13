@@ -79,3 +79,76 @@ export async function getLearningPost(
   const posts = await getCollection('learningPosts')
   return posts.find((post) => post.id.startsWith(slug)) ?? null
 }
+
+export const LEARNING_DESCRIPTION =
+  'Notes on courses, papers, and projects I\'ve worked through: what I studied, what I built, what I learnt.'
+
+export type LearningCounts = {
+  all: number
+  courses: number
+  papers: number
+  projects: number
+}
+
+export async function getLearningCounts(): Promise<LearningCounts> {
+  const allEntries = await getLearningWithPosts()
+  const allCourses = filterByType(allEntries, 'courses')
+  const allPapers = filterByType(allEntries, 'paper-readings')
+  const allProjects = (await getCollection('projects')).length
+  return {
+    all: allEntries.length + allProjects,
+    courses: allCourses.length,
+    papers: allPapers.length,
+    projects: allProjects,
+  }
+}
+
+export type LearningPath = {
+  params: { slug?: string }
+  props:
+    | { mode: 'detail'; entry: LearningEntry }
+    | { mode: 'list'; entries: LearningEntry[]; currentPage: number; lastPage: number }
+}
+
+export async function getLearningPaths(
+  type: string,
+  pageSize: number,
+): Promise<LearningPath[]> {
+  const allEntries = await getAllLearning()
+  const filtered = allEntries.filter((e) => e.id.startsWith(`${type}/`))
+  const paths: LearningPath[] = []
+
+  for (const entry of filtered) {
+    const slug = getSlug(entry.id)
+    if (await hasLearningPost(slug)) {
+      paths.push({
+        params: { slug },
+        props: { mode: 'detail' as const, entry },
+      })
+    }
+  }
+
+  const withPosts = await getLearningWithPosts()
+  const filteredWithPosts = filterByType(withPosts, type)
+  const lastPage = Math.ceil(filteredWithPosts.length / pageSize) || 1
+  if (filteredWithPosts.length === 0) {
+    paths.push({
+      params: { slug: undefined },
+      props: { mode: 'list' as const, entries: [], currentPage: 1, lastPage: 1 },
+    })
+  }
+  for (let i = 0; i < filteredWithPosts.length; i += pageSize) {
+    const pageNum = Math.floor(i / pageSize) + 1
+    paths.push({
+      params: { slug: pageNum === 1 ? undefined : String(pageNum) },
+      props: {
+        mode: 'list' as const,
+        entries: filteredWithPosts.slice(i, i + pageSize),
+        currentPage: pageNum,
+        lastPage,
+      },
+    })
+  }
+
+  return paths
+}

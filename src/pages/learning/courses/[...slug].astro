@@ -7,15 +7,14 @@ import Layout from '@/layouts/layout.astro'
 import LearningTabs from '@/components/learning-tabs.astro'
 import { Badge } from '@/components/ui/badge'
 import { Icon } from 'astro-icon/components'
-import { getCollection, render } from 'astro:content'
+import { render } from 'astro:content'
 import {
-  getAllLearning,
-  getLearningWithPosts,
+  getLearningPaths,
   getSlug,
-  filterByType,
+  getLearningCounts,
   getLinkedBlogPost,
   getLearningPost,
-  hasLearningPost,
+  LEARNING_DESCRIPTION,
 } from '@/lib/learning-utils'
 import { formatDate } from '@/lib/utils'
 import type { LearningEntry } from '@/lib/learning-utils'
@@ -24,46 +23,8 @@ import type { CollectionEntry } from 'astro:content'
 type LearningData = CollectionEntry<'learning'>['data']
 type BlogPost = CollectionEntry<'blog'>
 
-type Path = {
-  params: { slug?: string }
-  props:
-    | { mode: 'detail'; entry: LearningEntry }
-    | { mode: 'list'; entries: LearningEntry[]; currentPage: number; lastPage: number }
-}
-
 export async function getStaticPaths() {
-  const pageSize = 5
-  const allEntries = await getAllLearning()
-  const courses = allEntries.filter((e) => e.id.startsWith('courses/'))
-  const paths: Path[] = []
-
-  for (const entry of courses) {
-    const slug = getSlug(entry.id)
-    if (await hasLearningPost(slug)) {
-      paths.push({
-        params: { slug },
-        props: { mode: 'detail' as const, entry },
-      })
-    }
-  }
-
-  const withPosts = await getLearningWithPosts()
-  const filtered = filterByType(withPosts, 'courses')
-  const lastPage = Math.ceil(filtered.length / pageSize) || 1
-  for (let i = 0; i < filtered.length; i += pageSize) {
-    const pageNum = Math.floor(i / pageSize) + 1
-    paths.push({
-      params: { slug: pageNum === 1 ? undefined : String(pageNum) },
-      props: {
-        mode: 'list' as const,
-        entries: filtered.slice(i, i + pageSize),
-        currentPage: pageNum,
-        lastPage,
-      },
-    })
-  }
-
-  return paths
+  return getLearningPaths('courses', 5)
 }
 
 const { mode, entry, entries = [], currentPage = 1, lastPage = 1 } = Astro.props as {
@@ -74,10 +35,7 @@ const { mode, entry, entries = [], currentPage = 1, lastPage = 1 } = Astro.props
   lastPage?: number
 }
 
-const allEntries = await getLearningWithPosts()
-const allCourses = filterByType(allEntries, 'courses')
-const allPapers = filterByType(allEntries, 'paper-readings')
-const allProjects = (await getCollection('projects')).length
+const counts = await getLearningCounts()
 
 let d: LearningData | null = null
 let blogPost: BlogPost | null = null
@@ -238,14 +196,9 @@ const startDate = d?.start_date ?? d?.event_log?.find((e: { type: string }) => e
         ]}
       />
       <section class="text-muted-foreground mb-6 text-sm leading-relaxed">
-        <p>
-          A curated collection of courses and papers I've studied, documenting my learning journey — what I studied, what I built, and what I learned along the way.
-        </p>
+        <p>{LEARNING_DESCRIPTION}</p>
       </section>
-      <LearningTabs
-        activeTab="courses"
-        counts={{ all: allEntries.length, courses: allCourses.length, projects: allProjects, papers: allPapers.length }}
-      />
+      <LearningTabs activeTab="courses" counts={counts} />
       <div class="flex flex-col gap-y-4">
         {entries.length === 0 && (
           <p class="text-muted-foreground py-8 text-center text-sm">No courses recorded yet.</p>

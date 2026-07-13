@@ -3,13 +3,13 @@ import Breadcrumbs from '@/components/breadcrumbs.astro'
 import PageHead from '@/components/page-head.astro'
 import PaginationComponent from '@/components/ui/pagination'
 import Layout from '@/layouts/layout.astro'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { Icon } from 'astro-icon/components'
+import ProjectCard from '@/components/project-card.astro'
 import LearningTabs from '@/components/learning-tabs.astro'
+import { Badge } from '@/components/ui/badge'
+import { Icon } from 'astro-icon/components'
 import { getCollection, render } from 'astro:content'
 import { formatDate } from '@/lib/utils'
-import { getLearningWithPosts, filterByType } from '@/lib/learning-utils'
+import { getLearningCounts, LEARNING_DESCRIPTION } from '@/lib/learning-utils'
 import type { CollectionEntry } from 'astro:content'
 
 type ProjectData = CollectionEntry<'projects'>['data']
@@ -65,10 +65,7 @@ const { mode, entry, entries = [], currentPage = 1, lastPage = 1 } = Astro.props
   lastPage?: number
 }
 
-const allEntries = await getLearningWithPosts()
-const allCourses = filterByType(allEntries, 'courses')
-const allPapers = filterByType(allEntries, 'paper-readings')
-const allProjectsCount = (await getCollection('projects')).length
+const counts = await getLearningCounts()
 
 let d: ProjectData | null = null
 let rendered: { Content: any } | null = null
@@ -150,43 +147,15 @@ if (mode === 'detail' && entry) {
         ]}
       />
       <section class="text-muted-foreground mb-6 text-sm leading-relaxed">
-        <p>
-          A curated collection of courses and papers I've studied, documenting my learning journey — what I studied, what I built, and what I learned along the way.
-        </p>
+        <p>{LEARNING_DESCRIPTION}</p>
       </section>
-      <LearningTabs
-        activeTab="projects"
-        counts={{ all: allEntries.length, courses: allCourses.length, projects: allProjectsCount, papers: allPapers.length }}
-      />
+      <LearningTabs activeTab="projects" counts={counts} />
       <div class="flex flex-col gap-y-4">
         {entries.length === 0 && (
           <p class="text-muted-foreground py-8 text-center text-sm">No projects recorded yet.</p>
         )}
         {entries.map((p: CollectionEntry<'projects'>) => (
-            <a
-              href={`/learning/projects/${p.id.replace(/\.mdx$/, '')}`}
-              class="hover:bg-muted/50 rounded-xl border p-4 transition-colors duration-300 ease-in-out block"
-            >
-              <div class="flex flex-col gap-3">
-                <h3 class="text-lg font-medium">{p.data.title}</h3>
-                <div class="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
-                  <span>Projects</span>
-                  <Separator orientation="vertical" className="h-4!" />
-                  <span>{formatDate(p.data.date)}</span>
-                </div>
-                <p class="text-muted-foreground text-sm">{p.data.description}</p>
-                {p.data.labels && p.data.labels.length > 0 && (
-                  <div class="flex flex-wrap gap-2">
-                    {p.data.labels.map((label: string) => (
-                      <Badge variant="muted" className="flex items-center gap-x-1">
-                        <Icon name="lucide:hash" class="size-3" />
-                        {label}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </a>
+            <ProjectCard entry={p} />
           ))}
       </div>
       <PaginationComponent currentPage={currentPage} totalPages={lastPage} baseUrl="/learning/projects/" client:load />

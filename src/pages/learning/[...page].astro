@@ -6,7 +6,7 @@ import PageHead from '@/components/page-head.astro'
 import PaginationComponent from '@/components/ui/pagination'
 import Layout from '@/layouts/layout.astro'
 import LearningTabs from '@/components/learning-tabs.astro'
-import { getLearningWithPosts, filterByType } from '@/lib/learning-utils'
+import { getLearningWithPosts, getLearningCounts, LEARNING_DESCRIPTION } from '@/lib/learning-utils'
 import { getCollection } from 'astro:content'
 import type { LearningEntry } from '@/lib/learning-utils'
 import type { CollectionEntry } from 'astro:content'
@@ -68,10 +68,7 @@ export async function getStaticPaths() {
 
 const { entries, currentPage, lastPage } = Astro.props as PageProps
 
-const allEntries = await getLearningWithPosts()
-const allCourses = filterByType(allEntries, 'courses')
-const allPapers = filterByType(allEntries, 'paper-readings')
-const allProjectsCount = (await getCollection('projects')).length
+const counts = await getLearningCounts()
 ---
 
 <Layout class="max-w-3xl">
@@ -83,15 +80,10 @@ const allProjectsCount = (await getCollection('projects')).length
   />
 
   <section class="text-muted-foreground mb-6 text-sm leading-relaxed">
-    <p>
-      Notes on courses and papers I've worked through: what I studied, what I built, what I took away.
-    </p>
+    <p>{LEARNING_DESCRIPTION}</p>
   </section>
 
-  <LearningTabs
-    activeTab="all"
-    counts={{ all: allEntries.length + allProjectsCount, courses: allCourses.length, projects: allProjectsCount, papers: allPapers.length }}
-  />
+  <LearningTabs activeTab="all" counts={counts} />
 
   <div class="flex flex-col gap-y-4">
     {entries.length === 0 && (

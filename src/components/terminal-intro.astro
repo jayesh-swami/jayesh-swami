@@ -6,7 +6,7 @@ interface Props {
 const { lines } = Astro.props
 ---
 
-<section class="bg-background p-4 font-mono text-sm" data-lines={JSON.stringify(lines)}>
+<section class="bg-background h-full overflow-y-hidden p-4 font-mono text-sm" data-lines={JSON.stringify(lines)}>
   <div id="terminal-output" class="text-foreground leading-relaxed">
     {
       lines.map((line, i) => (
@@ -53,11 +53,13 @@ const { lines } = Astro.props
       lineDiv.appendChild(prompt);
       lineDiv.appendChild(currentTextEl);
       container.appendChild(lineDiv);
+      container.parentElement.scrollTop = container.parentElement.scrollHeight;
     }
 
     function finish() {
       const lastLine = container.querySelector('div:last-child');
       if (lastLine) lastLine.appendChild(cursor);
+      container.parentElement.style.overflowY = 'auto';
       setTimeout(() => { cursor.style.display = 'none'; }, 2000);
     }
 
@@ -71,6 +73,7 @@ const { lines } = Astro.props
       if (charIdx < line.length) {
         currentTextEl.textContent += line.charAt(charIdx);
         charIdx++;
+        container.parentElement.scrollTop = container.parentElement.scrollHeight;
         setTimeout(type, 35 + Math.random() * 20);
       } else {
         lineIdx++;
