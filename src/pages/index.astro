@@ -9,31 +9,26 @@ import { buttonVariants } from '@/components/ui/button'
 import { SITE } from '@/consts'
 import Layout from '@/layouts/layout.astro'
 import { getRecentPosts } from '@/lib/data-utils'
-import { getLearningWithPosts } from '@/lib/learning-utils'
+import { getLearningWithPosts, getLearningSortDate } from '@/lib/learning-utils'
 import { getCollection } from 'astro:content'
 
 const blog = await getRecentPosts(SITE.featuredPostCount)
 const allLearning = await getLearningWithPosts()
 const allProjects = await getCollection('projects')
 
-type CombinedItem =
-  | { type: 'learning'; entry: (typeof allLearning)[number] }
-  | { type: 'project'; entry: (typeof allProjects)[number] }
+const courses = allLearning
+  .filter(e => e.id.startsWith('courses/'))
+  .sort((a, b) => (getLearningSortDate(b)?.valueOf() ?? 0) - (getLearningSortDate(a)?.valueOf() ?? 0))
+  .slice(0, SITE.featuredLearningPerSection)
 
-const combined: CombinedItem[] = [
-  ...allLearning.map((entry) => ({ type: 'learning' as const, entry })),
-  ...allProjects.map((entry) => ({ type: 'project' as const, entry })),
-]
-  .sort((a, b) => {
-    const dateA = a.type === 'learning'
-      ? a.entry.data.start_date?.valueOf() ?? 0
-      : a.entry.data.date.valueOf()
-    const dateB = b.type === 'learning'
-      ? b.entry.data.start_date?.valueOf() ?? 0
-      : b.entry.data.date.valueOf()
-    return dateB - dateA
-  })
-  .slice(0, SITE.featuredLearningCount)
+const papers = allLearning
+  .filter(e => e.id.startsWith('paper-readings/'))
+  .sort((a, b) => (getLearningSortDate(b)?.valueOf() ?? 0) - (getLearningSortDate(a)?.valueOf() ?? 0))
+  .slice(0, SITE.featuredLearningPerSection)
+
+const projects = allProjects
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, SITE.featuredLearningPerSection)
 ---
 
 <Layout class="max-w-3xl">
@@ -70,21 +65,36 @@ const combined: CombinedItem[] = [
       </Link>
     </div>
   </section>
-  <section class="flex flex-col gap-y-4">
+  <section class="flex flex-col gap-y-6">
     <h2 class="text-2xl font-medium">Recent learning</h2>
-    <ul class="flex flex-col gap-y-4">
-      {
-        combined.map((item) =>
-            item.type === 'learning' ? (
-            <li>
-              <LearningCard entry={item.entry} />
-            </li>
-          ) : (
-            <ProjectCard entry={item.entry} />
-          )
-        )
-      }
-    </ul>
+
+    {projects.length > 0 && (
+      <div class="flex flex-col gap-y-3">
+        <h3 class="text-lg font-medium">Projects</h3>
+        <ul class="flex flex-col gap-y-4">
+          {projects.map(entry => <ProjectCard entry={entry} />)}
+        </ul>
+      </div>
+    )}
+
+    {papers.length > 0 && (
+      <div class="flex flex-col gap-y-3">
+        <h3 class="text-lg font-medium">Paper readings</h3>
+        <ul class="flex flex-col gap-y-4">
+          {papers.map(entry => <li><LearningCard entry={entry} /></li>)}
+        </ul>
+      </div>
+    )}
+
+    {courses.length > 0 && (
+      <div class="flex flex-col gap-y-3">
+        <h3 class="text-lg font-medium">Courses</h3>
+        <ul class="flex flex-col gap-y-4">
+          {courses.map(entry => <li><LearningCard entry={entry} /></li>)}
+        </ul>
+      </div>
+    )}
+
     <div class="flex justify-center">
       <Link
         href="/learning"

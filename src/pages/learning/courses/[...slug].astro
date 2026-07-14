@@ -107,7 +107,7 @@ const startDate = d?.start_date ?? d?.event_log?.find((e: { type: string }) => e
           {d.context && (
             <div class="bg-muted/50 rounded-lg p-4 text-sm">
               <div class="text-muted-foreground flex flex-col gap-x-6 gap-y-2 sm:flex-row sm:flex-wrap">
-                <span><span class="font-medium text-foreground">Mode: </span>{d.context.type}</span>
+                <span><span class="font-medium text-foreground">Format: </span>{d.context.type}</span>
                 {d.context.institution && (
                   <span><span class="font-medium text-foreground">Institution: </span>{d.context.institution}</span>
                 )}

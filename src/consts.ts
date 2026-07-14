@@ -7,7 +7,7 @@ export const SITE: Site = {
   author: 'jayesh-swami',
   locale: 'en-US',
   featuredPostCount: 2,
-  featuredLearningCount: 3,
+  featuredLearningPerSection: 2,
   postsPerPage: 3,
 }
 

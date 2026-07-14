@@ -3,12 +3,16 @@ import { getCollection, type CollectionEntry } from 'astro:content'
 export type LearningEntry = CollectionEntry<'learning'>
 export type LearningPostEntry = CollectionEntry<'learningPosts'>
 
+export function getLearningSortDate(entry: LearningEntry): Date | undefined {
+  return entry.data.end_date ?? entry.data.start_date ?? entry.data.event_log?.find((e: any) => e.type === 'start')?.date
+}
+
 export async function getAllLearning(): Promise<LearningEntry[]> {
   const entries = await getCollection('learning')
   return entries.sort(
     (a, b) => {
-      const aDate = a.data.start_date ?? a.data.event_log?.find((e: any) => e.type === 'start')?.date
-      const bDate = b.data.start_date ?? b.data.event_log?.find((e: any) => e.type === 'start')?.date
+      const aDate = getLearningSortDate(a)
+      const bDate = getLearningSortDate(b)
       return (bDate?.valueOf() ?? 0) - (aDate?.valueOf() ?? 0)
     },
   )

@@ -6,7 +6,7 @@ import PageHead from '@/components/page-head.astro'
 import PaginationComponent from '@/components/ui/pagination'
 import Layout from '@/layouts/layout.astro'
 import LearningTabs from '@/components/learning-tabs.astro'
-import { getLearningWithPosts, getLearningCounts, LEARNING_DESCRIPTION } from '@/lib/learning-utils'
+import { getLearningWithPosts, getLearningCounts, getLearningSortDate, LEARNING_DESCRIPTION } from '@/lib/learning-utils'
 import { getCollection } from 'astro:content'
 import type { LearningEntry } from '@/lib/learning-utils'
 import type { CollectionEntry } from 'astro:content'
@@ -33,10 +33,10 @@ export async function getStaticPaths() {
     ...projects.map((entry) => ({ type: 'project' as const, entry })),
   ].sort((a, b) => {
     const dateA = a.type === 'learning'
-      ? a.entry.data.start_date?.valueOf() ?? 0
+      ? getLearningSortDate(a.entry)?.valueOf() ?? 0
       : a.entry.data.date.valueOf()
     const dateB = b.type === 'learning'
-      ? b.entry.data.start_date?.valueOf() ?? 0
+      ? getLearningSortDate(b.entry)?.valueOf() ?? 0
       : b.entry.data.date.valueOf()
     return dateB - dateA
   })

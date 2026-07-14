@@ -17,10 +17,12 @@ After every change, go through this checklist and run only the tests relevant to
 ### If you touched learning pages or `src/lib/learning-utils.ts`
 - [ ] Tab counts on `/learning`, `/learning/courses`, `/learning/projects`, `/learning/papers` show the same total for "All"
 - [ ] `LEARNING_DESCRIPTION` renders consistently across all learning pages
+- [ ] All sorting uses `getLearningSortDate()` from `src/lib/learning-utils.ts` — no inline sort duplication
 
 ### If you touched `src/pages/index.astro` or `src/components/terminal-intro.astro`
 - [ ] Terminal intro renders and types without getting cut off on mobile
 - [ ] Terminal is scrollable after animation completes
+- [ ] Recent learning section sorts by `end_date ?? start_date ?? event_log.start` (descending)
 
 ### If you touched `src/components/footer.astro`
 - [ ] Footer has top border, copyright year, and social icons
