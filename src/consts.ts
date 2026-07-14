@@ -35,6 +35,18 @@ export const SOCIAL_LINKS: SocialLink[] = [
     href: '/rss.xml',
     label: 'RSS',
   },
+  {
+    href: 'https://letterboxd.com/jay_s/',
+    label: 'Letterboxd',
+  },
+  {
+    href: 'https://www.goodreads.com/user/show/49119518-jayesh-swami',
+    label: 'Goodreads',
+  },
+  {
+    href: 'https://www.instagram.com/jayesh._.s/',
+    label: 'Instagram',
+  },
 ]
 
 export const ICON_MAP: IconMap = {
@@ -44,4 +56,7 @@ export const ICON_MAP: IconMap = {
   Twitter: 'lucide:twitter',
   Email: 'lucide:mail',
   RSS: 'lucide:rss',
+  Letterboxd: 'simple-icons:letterboxd',
+  Goodreads: 'simple-icons:goodreads',
+  Instagram: 'simple-icons:instagram',
 }
