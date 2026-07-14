@@ -11,10 +11,9 @@ labels:
   - parallel-computing
 resources:
   - title: Indexing Practice Drill
-    url: https://github.com/jayesh-swami/amd-gpu-prog-learn/blob/main/practice/Tiling%20Index%20Drills%20(Claude%20gen).html
+    url: /projects/gpu-matrix-multiplication/tiling_index_drills.html
 ---
-
-This is a learning project I made with Gemini to learn the basics of GPU programming by implementing a matrix multiplication kernel. I wanted to test the findings in [“A Flexible Class of Parallel Matrix Multiplication Algorithms” (Gunnels et al.)](https://www.cs.utexas.edu/~lin/papers/ipps98.pdf) which discusses how different matrix shapes affect the performance of parallelized matrix multiplication algorithms. My device has the “AMD RYZEN AI MAX+ 395,” which uses the AMD Radeon 8060S Graphics chip, so I implemented this code using the AMD HIP runtime.
+I made this learning project with Gemini to learn the basics of GPU programming by implementing a matrix multiplication kernel. I wanted to test the findings in “A Flexible Class of Parallel Matrix Multiplication Algorithms,” which discusses how different matrix shapes affect the performance of parallelized matrix multiplication algorithms. My device has the “AMD RYZEN AI MAX+ 395,” which uses the AMD Radeon 8060S Graphics chip, so I used the AMD HIP runtime for this code.
 
 This project is divided into 4 challenges, and by the end of it, these were my takeaways:
 
@@ -26,7 +25,7 @@ This project is divided into 4 challenges, and by the end of it, these were my t
 
 I was struggling to understand the math behind block index, tile index, and global and local rows and columns, so I created this 20-question drill to help me build better intuition. I will add the link to the quiz at the end of the post.
 
-It was really fun to learn this and see how big the difference was between the naive kernel and the LDS-optimized kernel, which was about 4x faster, clocking in at about 1.3 TFLOPS. From there, I realized that while 1.3 TFLOPS was decent, it was nowhere near the performance of real-world production code that leverages architecture-specific optimizations. I found that there were a plethora of optimizations still on the table, and to get a sense of the possible performance gains, I asked AI to show me one. The optimization was to use the HIP runtime’s __half and __half2 data types and take advantage of packing 2 16-bit floats into 32-bit registers, allowing 2 values to be computed in a single cycle. This kernel was running about 9x faster than the naive kernel, clocking in at about 2.7 TFLOPS. 
+It was fun to see how big the difference was between the naive kernel and the LDS-optimized kernel, which was about 4x faster, clocking in at about 1.3 TFLOPS. From there, I realized that while 1.3 TFLOPS was decent, it was nowhere near the performance of real-world production code that leverages architecture-specific optimizations. I found that there were still many optimizations on the table, so I asked AI to show me one. The optimization was to use the HIP runtime’s __half and __half2 data types and take advantage of packing 2 16-bit floats into 32-bit registers, allowing 2 values to be computed in a single cycle. This kernel was running about 9x faster than the naive kernel, clocking in at about 2.7 TFLOPS. 
 
 | Kernel Version | Optimization Strategy | Performance | Speedup vs. Naive |
 | :--- | :--- | :--- | :--- |
@@ -34,9 +33,12 @@ It was really fun to learn this and see how big the difference was between the n
 | **Optimized Kernel** | LDS Shared Memory Caching | ~1.3 - 1.5 TFLOPS | **~4x Faster** |
 | **Super Optimized (`half2`)** | 16-bit Packed Register Math | **~2.7 TFLOPS** | **~9x Faster** |
 
-Although there were still quite a few optimizations that could be done to the kernel, I decided to leave them for now and return later to deepen my understanding of GPU programming.
+Although there were still quite a few optimizations that could be done to the kernel, I decided to leave them for now and return later to deepen my understanding of GPU programming. I aim to write a post on my blog where I will optimize the kernel layer by layer, so I did not go very deep into the concepts here. 
+
+While working on this small project, I also realized that to delve more deeply into this subject, I need a structured course or project to help me learn more about GPU programming in general. I found a freeCodeCamp tutorial on YouTube that explains CUDA programming, and I think I will go through it and learn before doing anything else in this area.
 
 If you would like to see all the steps of the project, I have included the link to the GitHub repository below. If you just want to check the code for the 3 kernels, I've attached it below.
+
 <details open>
   <summary><b>Naive Kernel Code</b></summary>
 
